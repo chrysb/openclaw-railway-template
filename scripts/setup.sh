@@ -97,7 +97,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
   "gateway": {
     "port": 18789,
     "mode": "local",
-    "bind": "lan"
+    "bind": "lan",
+    "auth": {
+      "mode": "token",
+      "token": "\${GATEWAY_AUTH_TOKEN}"
+    }
   },
   "commands": {
     "native": "auto",
