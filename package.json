@@ -1,0 +1,15 @@
+{
+  "name": "openclaw-railway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OpenClaw on Railway — one-click deploy",
+  "scripts": {
+    "start": "./scripts/setup.sh && npx openclaw gateway run"
+  },
+  "dependencies": {
+    "openclaw": "latest"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

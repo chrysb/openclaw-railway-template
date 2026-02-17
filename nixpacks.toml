@@ -1,0 +1,14 @@
+# Railway Nixpacks build config
+[phases.setup]
+nixpkgsArchive = "51ad838b03a05b1de6f9f2a0fffecee64a9788ee"
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = [
+  "npm install --omit=dev --ignore-scripts",
+  # gog CLI for Google Calendar + Gmail
+  "curl -sL https://github.com/steipete/gogcli/releases/download/v0.11.0/gogcli_0.11.0_linux_amd64.tar.gz | tar -xz gog && mv gog /usr/local/bin/gog && chmod +x /usr/local/bin/gog",
+]
+
+[start]
+cmd = "chmod +x /app/scripts/setup.sh && npm start"
