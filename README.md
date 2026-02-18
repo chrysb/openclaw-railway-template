@@ -107,8 +107,8 @@ Once you have everything ready, click the button:
 | `OPENCLAW_GATEWAY_TOKEN` | 🔒 Auto | Auto-generated, secures your gateway |
 | `GIT_EMAIL` | Optional | For commits (default: agent@openclaw.ai) |
 | `GIT_NAME` | Optional | For commits (default: OpenClaw Agent) |
-| `OPENAI_API_KEY` | Optional | For OpenAI models |
-| `GEMINI_API_KEY` | Optional | For Gemini models / image generation |
+| `OPENAI_API_KEY` | Optional | For OpenAI models + memory embeddings |
+| `GEMINI_API_KEY` | Optional | For Gemini models + memory embeddings |
 | `NOTION_API_KEY` | Optional | For Notion integration |
 
 ## After deploy
@@ -150,6 +150,8 @@ Once you have everything ready, click the button:
 4. DM the bot again — you're live!
 
 Check your GitHub repo — you should see the initial commit with your agent's full config and workspace.
+
+> **Memory search:** For your agent to semantically search its own memory, you need either `OPENAI_API_KEY` or `GEMINI_API_KEY` set. OpenClaw uses these to generate embeddings. Without one, memory recall won't work.
 
 ## How it works
 
