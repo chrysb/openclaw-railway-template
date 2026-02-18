@@ -1,6 +1,7 @@
 # Auth & secrets
 agents/*/agent/auth-profiles.json
 credentials/
+identity/
 *.token
 
 # Logs & caches
