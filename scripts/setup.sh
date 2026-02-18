@@ -76,40 +76,37 @@ CONFIG_FILE="$OPENCLAW_DIR/openclaw.json"
 if true; then
   echo "Creating default openclaw.json..."
   mkdir -p "$OPENCLAW_DIR"
-  cat > "$CONFIG_FILE" << CONFIGEOF
-{
-  "auth": {
-    "profiles": {
-      "anthropic:default": {
-        "provider": "anthropic",
-        "mode": "token"
-      }
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "anthropic/claude-sonnet-4-5"
+  node -e "
+    const fs = require('fs');
+    const cfg = {
+      auth: {
+        profiles: {
+          'anthropic:default': {
+            provider: 'anthropic',
+            mode: 'token'
+          }
+        }
       },
-      "workspace": "$OPENCLAW_DIR/workspace"
-    }
-  },
-  "channels": {},
-  "gateway": {
-    "port": 18789,
-    "mode": "local",
-    "bind": "lan",
-    "auth": {
-      "mode": "token",
-      "token": "\${GATEWAY_AUTH_TOKEN}"
-    }
-  },
-  "commands": {
-    "native": "auto",
-    "restart": true
-  }
-}
-CONFIGEOF
+      agents: {
+        defaults: {
+          model: { primary: 'anthropic/claude-sonnet-4-5' },
+          workspace: process.env.OPENCLAW_HOME + '/workspace'
+        }
+      },
+      channels: {},
+      gateway: {
+        port: 18789,
+        mode: 'local',
+        bind: 'lan',
+        auth: {
+          mode: 'token',
+          token: '\${GATEWAY_AUTH_TOKEN}'
+        }
+      },
+      commands: { native: 'auto', restart: true }
+    };
+    fs.writeFileSync('$CONFIG_FILE', JSON.stringify(cfg, null, 2));
+  "
 
   # Inject channel config from env vars
   if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
