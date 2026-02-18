@@ -126,7 +126,8 @@ Once you have everything ready, click the button:
    ```
 3. **Approve the pairing** — you need to run a command inside your Railway container:
 
-   **Option A: Railway CLI (recommended)**
+   You need to run a command inside your Railway container using the Railway CLI:
+
    ```bash
    # Install the Railway CLI if you haven't
    npm install -g @railway/cli
@@ -137,16 +138,10 @@ Once you have everything ready, click the button:
    # Link to your project (follow the prompts)
    railway link
 
-   # Open a shell in your running container
-   railway shell
+   # SSH into your running container
+   railway ssh
 
    # Once inside, approve the pairing
-   npx openclaw pairing approve telegram ABC123
-   ```
-
-   **Option B: Railway Dashboard**
-   Go to your service → **Settings** → scroll to **Execute Command** → run:
-   ```
    npx openclaw pairing approve telegram ABC123
    ```
 
