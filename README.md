@@ -86,6 +86,16 @@ Uses your Claude Pro/Max subscription instead of API billing.
 
 </details>
 
+<details>
+<summary><strong>Brave API key (optional, enables web search)</strong></summary>
+
+1. Go to [brave.com/search/api](https://brave.com/search/api/)
+2. Sign up for the **Free** plan (2,000 queries/month)
+3. Go to your dashboard → copy the API key
+4. Paste it as `BRAVE_API_KEY` during deploy
+
+</details>
+
 ---
 
 ## Deploy
@@ -111,6 +121,7 @@ Once you have everything ready, click the button:
 | `GIT_NAME` | Optional | For commits (default: OpenClaw Agent) |
 | `OPENAI_API_KEY` | Optional | For OpenAI models + memory embeddings |
 | `GEMINI_API_KEY` | Optional | For Gemini models + memory embeddings |
+| `BRAVE_API_KEY` | Optional | For web search |
 | `NOTION_API_KEY` | Optional | For Notion integration |
 
 ## After deploy
