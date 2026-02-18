@@ -1,7 +1,5 @@
 # Auth & secrets
-agents/*/agent/auth-profiles.json
-agents/*/agent/auth.json
-agents/*/sessions/
+agents/
 credentials/
 identity/
 *.token
