@@ -108,4 +108,13 @@ if [ -n "$DISCORD_BOT_TOKEN" ]; then
   echo "✓ Discord configured"
 fi
 
+# Debug: show config after channel setup
+echo "=== Config after setup ==="
+cat "$CONFIG_FILE"
+echo ""
+echo "=== End config ==="
+
+# Fix any issues doctor finds
+npx openclaw doctor --fix --non-interactive 2>&1 || true
+
 echo "✓ Setup complete — starting gateway"
