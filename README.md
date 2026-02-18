@@ -17,7 +17,8 @@ Deploy OpenClaw to Railway in one click. Get a 24/7 AI agent with persistent mem
 
 Before clicking Deploy, you'll need:
 
-**Required:**
+**Required (pick one):**
+- **Anthropic setup token** (recommended) — see [Getting an Anthropic token](#getting-an-anthropic-token) below
 - **Anthropic API key** — [console.anthropic.com](https://console.anthropic.com/) → API Keys → Create Key
 
 **At least one channel:**
@@ -30,7 +31,8 @@ Click the Deploy button above. Railway will ask you to fill in environment varia
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `ANTHROPIC_API_KEY` | ✅ | Your Anthropic API key |
+| `ANTHROPIC_TOKEN` | Pick one | Anthropic setup token (recommended, includes usage tracking) |
+| `ANTHROPIC_API_KEY` | Pick one | Anthropic API key (direct billing) |
 | `TELEGRAM_BOT_TOKEN` | Pick one | Telegram bot token from BotFather |
 | `DISCORD_BOT_TOKEN` | Pick one | Discord bot token |
 | `GATEWAY_AUTH_TOKEN` | Auto | Auto-generated, protects your gateway |
@@ -47,6 +49,23 @@ Once deployed:
 1. **Telegram:** DM your bot on Telegram
 2. **Discord:** Invite the bot to your server and DM it
 3. The bot will ask you to approve pairing — follow the instructions in the Railway deploy logs
+
+## Getting an Anthropic token
+
+The setup token is the easiest way to authenticate. It uses your existing Anthropic/Claude account and includes usage tracking.
+
+1. Install Claude Code locally: `npm install -g @anthropic-ai/claude-code`
+2. Run `claude` and complete the OAuth login
+3. Run `openclaw setup` — during onboarding, choose the **Anthropic token** option
+4. It will display a setup token — copy it
+5. Paste it as `ANTHROPIC_TOKEN` when deploying
+
+Alternatively, if you just want to use an API key:
+1. Go to [console.anthropic.com](https://console.anthropic.com/)
+2. Navigate to API Keys → Create Key
+3. Paste it as `ANTHROPIC_API_KEY` when deploying
+
+If both are set, the setup token takes priority.
 
 ## Getting a Telegram bot token
 

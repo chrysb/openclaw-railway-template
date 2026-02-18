@@ -67,12 +67,25 @@ CONFIG_FILE="$OPENCLAW_DIR/openclaw.json"
 
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "First boot: running openclaw onboard..."
+  # Determine auth method: token takes priority over API key
+  AUTH_ARGS=""
+  if [ -n "$ANTHROPIC_TOKEN" ]; then
+    AUTH_ARGS="--auth-choice token --token-provider anthropic --token $ANTHROPIC_TOKEN"
+    echo "Using Anthropic setup token"
+  elif [ -n "$ANTHROPIC_API_KEY" ]; then
+    AUTH_ARGS="--auth-choice apiKey --anthropic-api-key $ANTHROPIC_API_KEY"
+    echo "Using Anthropic API key"
+  else
+    echo "❌ Set ANTHROPIC_TOKEN or ANTHROPIC_API_KEY"
+    exit 1
+  fi
+
   npx openclaw onboard --non-interactive --accept-risk \
     --flow quickstart \
     --gateway-bind lan \
     --gateway-port 18789 \
     --gateway-token "${GATEWAY_AUTH_TOKEN}" \
-    --auth-choice anthropic
+    $AUTH_ARGS
   echo "✓ Onboard complete"
 
 else
