@@ -35,7 +35,7 @@ Click the Deploy button above. Railway will ask you to fill in environment varia
 | `ANTHROPIC_API_KEY` | Pick one | Anthropic API key (direct billing) |
 | `TELEGRAM_BOT_TOKEN` | Pick one | Telegram bot token from BotFather |
 | `DISCORD_BOT_TOKEN` | Pick one | Discord bot token |
-| `GATEWAY_AUTH_TOKEN` | Auto | Auto-generated, protects your gateway |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto | Auto-generated, protects your gateway |
 | `GITHUB_TOKEN` | Optional | For workspace git backup |
 | `GITHUB_WORKSPACE_REPO` | Optional | e.g. `username/my-workspace` |
 | `NOTION_API_KEY` | Optional | For Notion integration |

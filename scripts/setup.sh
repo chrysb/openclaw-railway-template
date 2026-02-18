@@ -5,7 +5,7 @@ set -e
 export OPENCLAW_HOME="/data"
 OPENCLAW_DIR="/data/.openclaw"
 WORKSPACE_DIR="$OPENCLAW_DIR/workspace"
-export OPENCLAW_GATEWAY_TOKEN="${GATEWAY_AUTH_TOKEN}"
+# OPENCLAW_GATEWAY_TOKEN is set directly as a Railway variable
 
 # ============================================================
 # 1. Workspace initialization
@@ -84,7 +84,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     --flow quickstart \
     --gateway-bind lan \
     --gateway-port 18789 \
-    --gateway-token "${GATEWAY_AUTH_TOKEN}" \
+    --gateway-token "${OPENCLAW_GATEWAY_TOKEN}" \
     $AUTH_ARGS
   echo "✓ Onboard complete"
 
