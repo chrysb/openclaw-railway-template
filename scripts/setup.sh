@@ -29,14 +29,12 @@ if [ ! -d "$OPENCLAW_DIR/.git" ]; then
   git remote add origin "https://${GITHUB_TOKEN}@github.com/${GITHUB_WORKSPACE_REPO}.git"
   git config user.email "${GIT_EMAIL:-agent@openclaw.ai}"
   git config user.name "${GIT_NAME:-OpenClaw Agent}"
-  # Pull if repo has existing content (from a previous setup)
-  git fetch origin main 2>/dev/null && git checkout main 2>/dev/null || echo "✓ Empty repo, will push after setup"
+  echo "✓ Git initialized"
 
 else
   cd "$OPENCLAW_DIR"
   git remote set-url origin "https://${GITHUB_TOKEN}@github.com/${GITHUB_WORKSPACE_REPO}.git" 2>/dev/null || true
-  git pull origin main --no-rebase 2>/dev/null || echo "⚠ Could not pull (may be first push)"
-  echo "✓ Repo updated"
+  echo "✓ Repo ready"
 fi
 
 # Remove legacy .git in workspace if it exists
