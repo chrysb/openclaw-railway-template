@@ -77,29 +77,19 @@ if [ ! -f "$CONFIG_FILE" ]; then
     --gateway-token "${GATEWAY_AUTH_TOKEN}" \
     --auth-choice anthropic
   echo "✓ Onboard complete"
-fi
 
-# Post-onboard config patches (idempotent, run every boot)
-echo "Applying config..."
+  # Post-onboard channel config (first boot only)
+  if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+    npx openclaw config set --json channels.telegram "{\"enabled\":true,\"botToken\":\"$TELEGRAM_BOT_TOKEN\",\"dmPolicy\":\"pairing\"}"
+    echo "✓ Telegram configured"
+  fi
 
-npx openclaw config set gateway.mode local
-npx openclaw config set gateway.bind lan
-npx openclaw config set gateway.port 18789
-
-if [ -n "$GATEWAY_AUTH_TOKEN" ]; then
-  npx openclaw config set gateway.auth.mode token
-  npx openclaw config set gateway.auth.token "$GATEWAY_AUTH_TOKEN"
-fi
-
-# Channels
-if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-  npx openclaw config set --json channels.telegram "{\"enabled\":true,\"botToken\":\"$TELEGRAM_BOT_TOKEN\",\"dmPolicy\":\"pairing\"}"
-  echo "✓ Telegram configured"
-fi
-
-if [ -n "$DISCORD_BOT_TOKEN" ]; then
-  npx openclaw config set --json channels.discord "{\"enabled\":true,\"botToken\":\"$DISCORD_BOT_TOKEN\"}"
-  echo "✓ Discord configured"
+  if [ -n "$DISCORD_BOT_TOKEN" ]; then
+    npx openclaw config set --json channels.discord "{\"enabled\":true,\"botToken\":\"$DISCORD_BOT_TOKEN\"}"
+    echo "✓ Discord configured"
+  fi
+else
+  echo "Config exists, skipping onboard"
 fi
 
 echo "✓ Setup complete — starting gateway"
