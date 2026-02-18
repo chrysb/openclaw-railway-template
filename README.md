@@ -58,12 +58,12 @@ The setup token is the easiest way to authenticate. It uses your existing Claude
 2. Run `claude` and complete the OAuth login in your browser
 3. Run `claude setup-token`
 4. Copy the token it outputs
-5. Paste it as `ANTHROPIC_TOKEN` when deploying
+5. Paste it into the `ANTHROPIC_TOKEN` field on the Railway deploy form
 
 Alternatively, if you just want to use an API key:
 1. Go to [console.anthropic.com](https://console.anthropic.com/)
 2. Navigate to API Keys → Create Key
-3. Paste it as `ANTHROPIC_API_KEY` when deploying
+3. Paste it into the `ANTHROPIC_API_KEY` field on the Railway deploy form
 
 If both are set, the setup token takes priority.
 
