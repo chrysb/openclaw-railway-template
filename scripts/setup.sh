@@ -88,17 +88,17 @@ npx openclaw config set gateway.port 18789
 
 if [ -n "$GATEWAY_AUTH_TOKEN" ]; then
   npx openclaw config set gateway.auth.mode token
-  npx openclaw config set gateway.auth.token "\${GATEWAY_AUTH_TOKEN}"
+  npx openclaw config set gateway.auth.token "$GATEWAY_AUTH_TOKEN"
 fi
 
 # Channels
 if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
-  npx openclaw config set --json channels.telegram '{"enabled":true,"botToken":"${TELEGRAM_BOT_TOKEN}","dmPolicy":"pairing"}'
+  npx openclaw config set --json channels.telegram "{\"enabled\":true,\"botToken\":\"$TELEGRAM_BOT_TOKEN\",\"dmPolicy\":\"pairing\"}"
   echo "✓ Telegram configured"
 fi
 
 if [ -n "$DISCORD_BOT_TOKEN" ]; then
-  npx openclaw config set --json channels.discord '{"enabled":true,"botToken":"${DISCORD_BOT_TOKEN}"}'
+  npx openclaw config set --json channels.discord "{\"enabled\":true,\"botToken\":\"$DISCORD_BOT_TOKEN\"}"
   echo "✓ Discord configured"
 fi
 
