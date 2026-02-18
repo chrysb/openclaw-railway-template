@@ -97,28 +97,30 @@ fi
 
 if [ ! -f "$OPENCLAW_CONFIG_PATH" ]; then
   echo "First boot: running openclaw onboard..."
-  AUTH_ARGS=""
+  ONBOARD_ARGS=(
+    --non-interactive --accept-risk
+    --flow quickstart
+    --gateway-bind lan
+    --gateway-port 18789
+    --gateway-auth token
+    --gateway-token "${OPENCLAW_GATEWAY_TOKEN}"
+    --no-install-daemon
+    --skip-health
+    --workspace "$WORKSPACE_DIR"
+  )
+
   if [ -n "$ANTHROPIC_TOKEN" ]; then
-    AUTH_ARGS="--auth-choice token --token-provider anthropic --token $ANTHROPIC_TOKEN"
+    ONBOARD_ARGS+=(--auth-choice token --token-provider anthropic --token "$ANTHROPIC_TOKEN")
     echo "Using Anthropic setup token"
   elif [ -n "$ANTHROPIC_API_KEY" ]; then
-    AUTH_ARGS="--auth-choice apiKey --anthropic-api-key $ANTHROPIC_API_KEY"
+    ONBOARD_ARGS+=(--auth-choice apiKey --anthropic-api-key "$ANTHROPIC_API_KEY")
     echo "Using Anthropic API key"
   else
     echo "❌ Set ANTHROPIC_TOKEN or ANTHROPIC_API_KEY"
     exit 1
   fi
 
-  npx openclaw onboard --non-interactive --accept-risk \
-    --flow quickstart \
-    --gateway-bind lan \
-    --gateway-port 18789 \
-    --gateway-auth token \
-    --gateway-token "${OPENCLAW_GATEWAY_TOKEN}" \
-    --no-install-daemon \
-    --skip-health \
-    --workspace "$WORKSPACE_DIR" \
-    $AUTH_ARGS
+  npx openclaw onboard "${ONBOARD_ARGS[@]}"
   echo "✓ Onboard complete"
 
   # Remove nested .git that onboard creates in workspace
