@@ -9,6 +9,7 @@ fi
 
 OPENCLAW_DIR="$OPENCLAW_HOME"
 WORKSPACE_DIR="$OPENCLAW_DIR/workspace"
+export OPENCLAW_CONFIG_PATH="$OPENCLAW_DIR/openclaw.json"
 
 # ============================================================
 # 1. Workspace initialization
