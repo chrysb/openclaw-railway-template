@@ -105,6 +105,8 @@ Once you have everything ready, click the button:
 | `TELEGRAM_BOT_TOKEN` | 🔀 Pick one | From BotFather |
 | `DISCORD_BOT_TOKEN` | 🔀 Pick one | From Discord Developer Portal |
 | `OPENCLAW_GATEWAY_TOKEN` | 🔒 Auto | Auto-generated, secures your gateway |
+| `PORT` | 🔒 Auto | Set by Railway |
+| `WEBHOOK_TOKEN` | 🔒 Auto | Auto-generated, secures webhook endpoints |
 | `GIT_EMAIL` | Optional | For commits (default: agent@openclaw.ai) |
 | `GIT_NAME` | Optional | For commits (default: OpenClaw Agent) |
 | `OPENAI_API_KEY` | Optional | For OpenAI models + memory embeddings |
