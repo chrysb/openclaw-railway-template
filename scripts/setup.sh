@@ -25,7 +25,7 @@ mkdir -p "$OPENCLAW_DIR"
 
 if [ ! -d "$OPENCLAW_DIR/.git" ]; then
   cd "$OPENCLAW_DIR"
-  git init
+  git init -b main
   git remote add origin "https://${GITHUB_TOKEN}@github.com/${GITHUB_WORKSPACE_REPO}.git"
   git config user.email "${GIT_EMAIL:-agent@openclaw.ai}"
   git config user.name "${GIT_NAME:-OpenClaw Agent}"
