@@ -6,7 +6,6 @@ export OPENCLAW_HOME="/data"
 OPENCLAW_DIR="/data/.openclaw"
 WORKSPACE_DIR="$OPENCLAW_DIR/workspace"
 export OPENCLAW_CONFIG_PATH="$OPENCLAW_DIR/openclaw.json"
-CONFIG_FILE="$OPENCLAW_DIR/openclaw.json"
 
 # ============================================================
 # 1. Git repo initialization (at .openclaw level, not workspace)
@@ -94,7 +93,7 @@ fi
 # 3. OpenClaw onboard + config
 # ============================================================
 
-if [ ! -f "$CONFIG_FILE" ]; then
+if [ ! -f "$OPENCLAW_CONFIG_PATH" ]; then
   echo "First boot: running openclaw onboard..."
   AUTH_ARGS=""
   if [ -n "$ANTHROPIC_TOKEN" ]; then
@@ -126,7 +125,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   echo "Sanitizing config secrets..."
   node -e "
     const fs = require('fs');
-    const configPath = '$CONFIG_FILE';
+    const configPath = '$OPENCLAW_CONFIG_PATH';
     let content = fs.readFileSync(configPath, 'utf8');
 
     const replacements = [
