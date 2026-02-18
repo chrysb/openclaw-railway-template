@@ -144,4 +144,9 @@ CONFIGEOF
   echo "✓ Default config created"
 fi
 
-echo "✓ Setup complete — starting gateway"
+echo "✓ Setup complete"
+echo "  OPENCLAW_HOME=$OPENCLAW_HOME"
+echo "  Config file: $CONFIG_FILE"
+echo "  Config exists: $(test -f "$CONFIG_FILE" && echo yes || echo no)"
+ls -la "$OPENCLAW_DIR/" 2>/dev/null || echo "  ⚠ OPENCLAW_DIR does not exist"
+echo "Starting gateway..."
