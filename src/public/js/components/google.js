@@ -64,8 +64,13 @@ export function Google() {
   const handleDisconnect = async () => {
     if (!confirm('Disconnect Google account? Your agent will lose access to Gmail, Calendar, etc.')) return;
     const data = await apiDisconnect();
-    if (data.ok) refresh();
-    else alert('Failed to disconnect: ' + (data.error || 'unknown'));
+    if (data.ok) {
+      setApiStatus({});
+      setGoogle(null);
+      refresh();
+    } else {
+      alert('Failed to disconnect: ' + (data.error || 'unknown'));
+    }
   };
 
   if (!google) {
