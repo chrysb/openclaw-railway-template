@@ -473,12 +473,17 @@ app.put('/api/env', (req, res) => {
 
   // Filter out system vars
   const filtered = vars.filter(v => !kSystemVars.has(v.key));
+
+  // 1. Remove channels while old tokens are still in env
+  syncChannelConfig(filtered, 'remove');
+
+  // 2. Write .env and reload into process.env
   writeEnvFile(filtered);
   const changed = reloadEnv();
   console.log(`[wrapper] Env vars saved (${filtered.length} vars, changed=${changed})`);
 
-  // Sync channel enabled flags in openclaw.json based on token presence
-  syncChannelConfig(filtered);
+  // 3. Add channels now that new tokens are in env
+  syncChannelConfig(filtered, 'add');
 
   res.json({ ok: true, changed });
 });
@@ -995,45 +1000,43 @@ function getBaseUrl(req) {
 }
 
 const kChannelDefs = {
-  telegram: { envKey: 'TELEGRAM_BOT_TOKEN', tokenField: 'botToken', envRef: '${TELEGRAM_BOT_TOKEN}' },
-  discord:  { envKey: 'DISCORD_BOT_TOKEN',  tokenField: 'token',    envRef: '${DISCORD_BOT_TOKEN}' },
+  telegram: { envKey: 'TELEGRAM_BOT_TOKEN' },
+  discord:  { envKey: 'DISCORD_BOT_TOKEN' },
 };
 
-function syncChannelConfig(savedVars) {
-  const configPath = `${OPENCLAW_DIR}/openclaw.json`;
+// mode: 'remove' = only removals, 'add' = only additions, 'all' = both
+function syncChannelConfig(savedVars, mode = 'all') {
   try {
+    const configPath = `${OPENCLAW_DIR}/openclaw.json`;
     const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    if (!cfg.channels) return;
-    const savedKeys = new Set(savedVars.filter(v => v.value).map(v => v.key));
-    let changed = false;
-
-    if (!cfg.plugins) cfg.plugins = {};
-    if (!cfg.plugins.entries) cfg.plugins.entries = {};
+    const savedMap = Object.fromEntries(savedVars.filter(v => v.value).map(v => [v.key, v.value]));
+    const env = gatewayEnv();
 
     for (const [ch, def] of Object.entries(kChannelDefs)) {
-      const hasToken = savedKeys.has(def.envKey);
+      const token = savedMap[def.envKey];
+      const isConfigured = cfg.channels?.[ch]?.enabled;
 
-      if (hasToken && !cfg.channels[ch]?.enabled) {
-        cfg.channels[ch] = {
-          ...(cfg.channels[ch] || {}),
-          enabled: true,
-          [def.tokenField]: def.envRef,
-          dmPolicy: cfg.channels[ch]?.dmPolicy || 'pairing',
-          groupPolicy: cfg.channels[ch]?.groupPolicy || 'allowlist',
-        };
-        cfg.plugins.entries[ch] = { enabled: true };
-        console.log(`[wrapper] Channel ${ch} enabled`);
-        changed = true;
-      } else if (!hasToken && cfg.channels[ch] && (cfg.channels[ch].enabled || cfg.channels[ch][def.tokenField])) {
-        cfg.channels[ch].enabled = false;
-        delete cfg.channels[ch][def.tokenField];
-        console.log(`[wrapper] Channel ${ch} disabled, token ref removed`);
-        changed = true;
+      if (token && !isConfigured && (mode === 'add' || mode === 'all')) {
+        console.log(`[wrapper] Adding channel: ${ch}`);
+        try {
+          execSync(`openclaw channels add --channel ${ch} --token "${token}"`, { env, timeout: 15000, encoding: 'utf8' });
+          const raw = fs.readFileSync(configPath, 'utf8');
+          if (raw.includes(token)) {
+            fs.writeFileSync(configPath, raw.split(token).join('${' + def.envKey + '}'));
+          }
+          console.log(`[wrapper] Channel ${ch} added`);
+        } catch (e) {
+          console.error(`[wrapper] channels add ${ch}: ${(e.stderr || e.message || '').toString().trim().slice(0, 200)}`);
+        }
+      } else if (!token && isConfigured && (mode === 'remove' || mode === 'all')) {
+        console.log(`[wrapper] Removing channel: ${ch}`);
+        try {
+          execSync(`openclaw channels remove --channel ${ch} --delete`, { env, timeout: 15000, encoding: 'utf8' });
+          console.log(`[wrapper] Channel ${ch} removed`);
+        } catch (e) {
+          console.error(`[wrapper] channels remove ${ch}: ${(e.stderr || e.message || '').toString().trim().slice(0, 200)}`);
+        }
       }
-    }
-
-    if (changed) {
-      fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
     }
   } catch (e) {
     console.error('[wrapper] syncChannelConfig error:', e.message);
