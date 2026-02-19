@@ -289,6 +289,42 @@ app.post('/api/onboard', async (req, res) => {
       .replace(/\.git$/, '');
     const remoteUrl = `https://${varMap.GITHUB_TOKEN}@github.com/${repoUrl}.git`;
 
+    // Create repo if it doesn't exist, or verify it's empty
+    const [repoOwner, repoName] = repoUrl.split('/');
+    const ghHeaders = { Authorization: `token ${varMap.GITHUB_TOKEN}`, 'User-Agent': 'openclaw-railway', Accept: 'application/vnd.github+json' };
+    try {
+      const checkRes = await fetch(`https://api.github.com/repos/${repoUrl}`, { headers: ghHeaders });
+      if (checkRes.status === 404) {
+        // Repo doesn't exist — create it
+        console.log(`[onboard] Creating repo ${repoUrl}...`);
+        const createRes = await fetch('https://api.github.com/user/repos', {
+          method: 'POST',
+          headers: { ...ghHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: repoName, private: true, auto_init: false }),
+        });
+        if (!createRes.ok) {
+          const err = await createRes.json().catch(() => ({}));
+          return res.status(400).json({ ok: false, error: `Failed to create repo: ${err.message || createRes.statusText}` });
+        }
+        console.log(`[onboard] Repo ${repoUrl} created`);
+      } else if (checkRes.ok) {
+        // Repo exists — verify it's empty
+        const { stdout } = await new Promise((resolve, reject) => {
+          exec(`git ls-remote "${remoteUrl}"`, { timeout: 15000 }, (err, stdout) => {
+            if (err) return reject(err);
+            resolve({ stdout: stdout?.trim() || '' });
+          });
+        });
+        if (stdout.length > 0) {
+          return res.status(400).json({ ok: false, error: `Repo "${repoUrl}" already has content. Please use an empty repo or a new name — we'll create it for you.` });
+        }
+      } else {
+        return res.status(400).json({ ok: false, error: `Cannot access repo "${repoUrl}" — check your token has the "repo" scope` });
+      }
+    } catch (e) {
+      return res.status(400).json({ ok: false, error: `GitHub error: ${e.message}` });
+    }
+
     fs.mkdirSync(OPENCLAW_DIR, { recursive: true });
     fs.mkdirSync(WORKSPACE_DIR, { recursive: true });
 
@@ -406,7 +442,7 @@ app.post('/api/onboard', async (req, res) => {
     } catch (e) { console.error('[onboard] Skill install error:', e.message); }
 
     // 7. Git commit + push
-    await shellCmd(`cd ${OPENCLAW_DIR} && git add -A && git commit -m "initial setup" && git push -u origin main --force`, { timeout: 30000 })
+    await shellCmd(`cd ${OPENCLAW_DIR} && git add -A && git commit -m "initial setup" && git push -u origin main`, { timeout: 30000 })
       .catch(e => console.error('[onboard] Git push error:', e.message));
     console.log('[onboard] Initial state committed and pushed');
 
@@ -495,10 +531,12 @@ app.put('/api/env', (req, res) => {
 app.get('/api/status', async (req, res) => {
   const configExists = fs.existsSync(`${OPENCLAW_DIR}/openclaw.json`);
   const running = await isGatewayRunning();
+  const repo = process.env.GITHUB_WORKSPACE_REPO || '';
   res.json({
     gateway: running ? 'running' : (configExists ? 'starting' : 'not_onboarded'),
     configExists,
     channels: getChannelStatus(),
+    repo,
   });
 });
 

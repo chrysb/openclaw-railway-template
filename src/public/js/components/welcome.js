@@ -28,7 +28,7 @@ const kGroups = [
         hint: html`Create at <a href="https://github.com/settings/tokens" target="_blank" class="text-blue-400 hover:underline">github.com/settings/tokens</a> with <code class="text-xs bg-black/30 px-1 rounded">repo</code> scope`,
         placeholder: "ghp_...",
       },
-      { key: "GITHUB_WORKSPACE_REPO", label: "Workspace Repo", hint: "Create a new empty private repo — any format works", placeholder: "username/my-agent", isText: true },
+      { key: "GITHUB_WORKSPACE_REPO", label: "Workspace Repo", hint: "We'll create this private repo for you if it doesn't exist", placeholder: "username/my-agent", isText: true },
     ],
     validate: (vals) => !!(vals.GITHUB_TOKEN && vals.GITHUB_WORKSPACE_REPO),
   },
