@@ -406,17 +406,28 @@ app.post('/api/google/disconnect', async (req, res) => {
       email = stateData.email || '';
     } catch {}
 
-    // Revoke via gog CLI
+    // Revoke token on Google's side
     if (email) {
+      // Export token first so we can revoke it
+      const exportResult = await gogCmd(`auth tokens export ${email} --out /tmp/gog-revoke.json --overwrite`, { quiet: true });
+      if (exportResult.ok) {
+        try {
+          const tokenData = JSON.parse(fs.readFileSync('/tmp/gog-revoke.json', 'utf8'));
+          if (tokenData.refresh_token) {
+            await fetch(`https://oauth2.googleapis.com/revoke?token=${tokenData.refresh_token}`, { method: 'POST' });
+            console.log(`[wrapper] Revoked Google token for ${email}`);
+          }
+          fs.unlinkSync('/tmp/gog-revoke.json');
+        } catch {}
+      }
+
+      // Remove from gog keyring
       await gogCmd(`auth remove ${email}`);
     }
 
-    // Clear state
-    try {
-      const stateData = JSON.parse(fs.readFileSync(GOG_STATE_PATH, 'utf8'));
-      stateData.authenticated = false;
-      fs.writeFileSync(GOG_STATE_PATH, JSON.stringify(stateData));
-    } catch {}
+    // Delete state and credentials
+    try { fs.unlinkSync(GOG_STATE_PATH); } catch {}
+    try { fs.unlinkSync(GOG_CREDENTIALS_PATH); } catch {}
 
     console.log(`[wrapper] Google disconnected: ${email}`);
     res.json({ ok: true });

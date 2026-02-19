@@ -66,7 +66,8 @@ export function Google() {
     const data = await apiDisconnect();
     if (data.ok) {
       setApiStatus({});
-      setGoogle(null);
+      setScopes(getDefaultScopes());
+      showToast('Google account disconnected', 'green');
       refresh();
     } else {
       alert('Failed to disconnect: ' + (data.error || 'unknown'));
