@@ -116,9 +116,9 @@ app.get('/api/status', (req, res) => {
 });
 
 // Helper: run openclaw CLI command
-function clawCmd(cmd) {
+function clawCmd(cmd, { quiet = false } = {}) {
   return new Promise((resolve) => {
-    console.log(`[wrapper] Running: openclaw ${cmd}`);
+    if (!quiet) console.log(`[wrapper] Running: openclaw ${cmd}`);
     exec(`openclaw ${cmd}`, {
       env: {
         ...process.env,
@@ -128,7 +128,7 @@ function clawCmd(cmd) {
       timeout: 15000,
     }, (err, stdout, stderr) => {
       const result = { ok: !err, stdout: stdout.trim(), stderr: stderr.trim(), code: err?.code };
-      console.log(`[wrapper] Result: ok=${result.ok} stdout=${result.stdout.slice(0, 200)} stderr=${result.stderr.slice(0, 200)}`);
+      if (!quiet && !result.ok) console.log(`[wrapper] Error: ${result.stderr.slice(0, 200)}`);
       resolve(result);
     });
   });
@@ -160,7 +160,7 @@ app.get('/api/pairings', async (req, res) => {
       if (!config.channels?.[ch]?.enabled) continue;
     } catch { continue; }
 
-    const result = await clawCmd(`pairing list ${ch}`);
+    const result = await clawCmd(`pairing list ${ch}`, { quiet: true });
     if (result.ok && result.stdout) {
       const lines = result.stdout.split('\n').filter(l => l.trim());
       for (const line of lines) {
@@ -176,9 +176,6 @@ app.get('/api/pairings', async (req, res) => {
     }
   }
 
-  if (pending.length > 0) {
-    console.log(`[wrapper] Found ${pending.length} pending pairing(s)`);
-  }
   pairingCache = { pending, ts: Date.now() };
   res.json({ pending });
 });
@@ -222,15 +219,15 @@ const GOG_CREDENTIALS_PATH = `${GOG_CONFIG_DIR}/credentials.json`;
 const GOG_STATE_PATH = `${GOG_CONFIG_DIR}/state.json`;
 
 // Helper: run gog CLI command (config stored on persistent volume)
-function gogCmd(cmd) {
+function gogCmd(cmd, { quiet = false } = {}) {
   return new Promise((resolve) => {
-    console.log(`[wrapper] Running: gog ${cmd}`);
+    if (!quiet) console.log(`[wrapper] Running: gog ${cmd}`);
     exec(`gog ${cmd}`, {
       timeout: 15000,
       env: { ...process.env, XDG_CONFIG_HOME: `${OPENCLAW_DIR}` },
     }, (err, stdout, stderr) => {
       const result = { ok: !err, stdout: stdout.trim(), stderr: stderr.trim() };
-      console.log(`[wrapper] gog result: ok=${result.ok} stdout=${result.stdout.slice(0, 200)}`);
+      if (!quiet && !result.ok) console.log(`[wrapper] gog error: ${result.stderr.slice(0, 200)}`);
       resolve(result);
     });
   });
@@ -238,12 +235,15 @@ function gogCmd(cmd) {
 
 // API: Google auth status
 app.get('/api/google/status', async (req, res) => {
+  if (!gatewayReady) {
+    return res.json({ hasCredentials: false, authenticated: false, email: '', services: '' });
+  }
   const hasCredentials = fs.existsSync(GOG_CREDENTIALS_PATH);
   let authenticated = false;
   let email = '';
 
   if (hasCredentials) {
-    const result = await gogCmd('auth list --plain');
+    const result = await gogCmd('auth list --plain', { quiet: true });
     if (result.ok && result.stdout && !result.stdout.includes('no accounts')) {
       authenticated = true;
       email = result.stdout.split('\n')[0]?.split('\t')[0] || '';
