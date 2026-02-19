@@ -18,6 +18,21 @@ if [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_WORKSPACE_REPO" ]; then
 fi
 
 # ============================================================
+# 1b. Install gog (Google Workspace CLI) if not present
+# ============================================================
+
+if ! command -v gog &> /dev/null; then
+  echo "Installing gog CLI..."
+  GOG_VERSION="${GOG_VERSION:-v0.11.0}"
+  curl -fsSL "https://github.com/steipete/gogcli/releases/download/${GOG_VERSION}/gog_${GOG_VERSION}_linux_amd64.tar.gz" -o /tmp/gog.tar.gz
+  tar -xzf /tmp/gog.tar.gz -C /tmp/
+  mv /tmp/gog /usr/local/bin/gog
+  chmod +x /usr/local/bin/gog
+  rm -f /tmp/gog.tar.gz
+  echo "✓ gog $(gog --version 2>/dev/null | head -1) installed"
+fi
+
+# ============================================================
 # 2. Git repo initialization (at .openclaw level)
 # ============================================================
 
