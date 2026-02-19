@@ -202,11 +202,16 @@ app.post('/api/pairings/:id/reject', async (req, res) => {
 // ============================================================
 
 const SCOPE_MAP = {
-  gmail: 'https://www.googleapis.com/auth/gmail.modify',
-  calendar: 'https://www.googleapis.com/auth/calendar',
-  drive: 'https://www.googleapis.com/auth/drive',
-  contacts: 'https://www.googleapis.com/auth/contacts',
-  sheets: 'https://www.googleapis.com/auth/spreadsheets',
+  'gmail:read': 'https://www.googleapis.com/auth/gmail.readonly',
+  'gmail:write': 'https://www.googleapis.com/auth/gmail.modify',
+  'calendar:read': 'https://www.googleapis.com/auth/calendar.readonly',
+  'calendar:write': 'https://www.googleapis.com/auth/calendar',
+  'drive:read': 'https://www.googleapis.com/auth/drive.readonly',
+  'drive:write': 'https://www.googleapis.com/auth/drive',
+  'contacts:read': 'https://www.googleapis.com/auth/contacts.readonly',
+  'contacts:write': 'https://www.googleapis.com/auth/contacts',
+  'sheets:read': 'https://www.googleapis.com/auth/spreadsheets.readonly',
+  'sheets:write': 'https://www.googleapis.com/auth/spreadsheets',
 };
 const BASE_SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email'];
 
@@ -317,7 +322,7 @@ app.post('/api/google/credentials', async (req, res) => {
 // OAuth: Start Google auth flow
 app.get('/auth/google/start', (req, res) => {
   const email = req.query.email || '';
-  const services = (req.query.services || 'gmail,calendar').split(',').filter(Boolean);
+  const services = (req.query.services || 'gmail:read,gmail:write,calendar:read,calendar:write').split(',').filter(Boolean);
 
   try {
     // Read credentials — try credentials.json first, fall back to state file
@@ -448,13 +453,27 @@ app.get('/auth/google/callback', async (req, res) => {
       }));
     }
 
-    // Update state
-    fs.writeFileSync(GOG_STATE_PATH, JSON.stringify({ email, authenticated: true }));
+    // Decode services from state
+    let services = [];
+    try {
+      const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
+      services = decoded.services || [];
+    } catch {}
 
-    res.redirect('/setup?google=success');
+    // Update state
+    fs.writeFileSync(GOG_STATE_PATH, JSON.stringify({ email, clientId, clientSecret, services, authenticated: true }));
+
+    // Close popup and notify parent
+    res.send(`<!DOCTYPE html><html><body><script>
+      window.opener?.postMessage({ google: 'success', email: '${email}' }, '*');
+      window.close();
+    </script><p>Google connected! You can close this window.</p></body></html>`);
   } catch (err) {
     console.error('[wrapper] Google OAuth callback error:', err);
-    res.redirect('/setup?google=error&message=' + encodeURIComponent(err.message));
+    res.send(`<!DOCTYPE html><html><body><script>
+      window.opener?.postMessage({ google: 'error', message: '${err.message.replace(/'/g, "\\'")}' }, '*');
+      window.close();
+    </script><p>Error: ${err.message}. You can close this window.</p></body></html>`);
   }
 });
 

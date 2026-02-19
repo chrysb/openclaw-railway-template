@@ -115,23 +115,43 @@
           </details>
         </div>
         <div>
-          <label class="text-sm text-gray-400 block mb-2">Services to connect</label>
-          <div class="grid grid-cols-2 gap-2">
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" id="svc-gmail" checked class="rounded"> Gmail
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" id="svc-calendar" checked class="rounded"> Calendar
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" id="svc-drive" class="rounded"> Drive
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" id="svc-contacts" class="rounded"> Contacts
-            </label>
-            <label class="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" id="svc-sheets" class="rounded"> Sheets
-            </label>
+          <label class="text-sm text-gray-400 block mb-2">Services & permissions</label>
+          <div class="space-y-2">
+            <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+              <span class="text-sm">📧 Gmail</span>
+              <div class="flex gap-1">
+                <button onclick="toggleScope(this,'gmail:read')" data-scope="gmail:read" class="scope-btn active text-xs px-2 py-0.5 rounded">Read</button>
+                <button onclick="toggleScope(this,'gmail:write')" data-scope="gmail:write" class="scope-btn active text-xs px-2 py-0.5 rounded">Write</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+              <span class="text-sm">📅 Calendar</span>
+              <div class="flex gap-1">
+                <button onclick="toggleScope(this,'calendar:read')" data-scope="calendar:read" class="scope-btn active text-xs px-2 py-0.5 rounded">Read</button>
+                <button onclick="toggleScope(this,'calendar:write')" data-scope="calendar:write" class="scope-btn active text-xs px-2 py-0.5 rounded">Write</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+              <span class="text-sm">📁 Drive</span>
+              <div class="flex gap-1">
+                <button onclick="toggleScope(this,'drive:read')" data-scope="drive:read" class="scope-btn text-xs px-2 py-0.5 rounded">Read</button>
+                <button onclick="toggleScope(this,'drive:write')" data-scope="drive:write" class="scope-btn text-xs px-2 py-0.5 rounded">Write</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+              <span class="text-sm">👤 Contacts</span>
+              <div class="flex gap-1">
+                <button onclick="toggleScope(this,'contacts:read')" data-scope="contacts:read" class="scope-btn text-xs px-2 py-0.5 rounded">Read</button>
+                <button onclick="toggleScope(this,'contacts:write')" data-scope="contacts:write" class="scope-btn text-xs px-2 py-0.5 rounded">Write</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
+              <span class="text-sm">📊 Sheets</span>
+              <div class="flex gap-1">
+                <button onclick="toggleScope(this,'sheets:read')" data-scope="sheets:read" class="scope-btn text-xs px-2 py-0.5 rounded">Read</button>
+                <button onclick="toggleScope(this,'sheets:write')" data-scope="sheets:write" class="scope-btn text-xs px-2 py-0.5 rounded">Write</button>
+              </div>
+            </div>
           </div>
         </div>
         <div>
@@ -171,6 +191,52 @@
   </div>
 
   <script>
+    // Scope toggle buttons
+    function toggleScope(btn, scope) {
+      btn.classList.toggle('active');
+      // If enabling write, also enable read
+      if (scope.endsWith(':write') && btn.classList.contains('active')) {
+        const readBtn = document.querySelector(`[data-scope="${scope.replace(':write', ':read')}"]`);
+        if (readBtn) readBtn.classList.add('active');
+      }
+      // If disabling read, also disable write
+      if (scope.endsWith(':read') && !btn.classList.contains('active')) {
+        const writeBtn = document.querySelector(`[data-scope="${scope.replace(':read', ':write')}"]`);
+        if (writeBtn) writeBtn.classList.remove('active');
+      }
+    }
+
+    function getSelectedScopes() {
+      return Array.from(document.querySelectorAll('.scope-btn.active')).map(b => b.dataset.scope);
+    }
+
+    // Style scope buttons
+    const style = document.createElement('style');
+    style.textContent = `
+      .scope-btn { background: #1a1a1a; color: #555; border: 1px solid #333; transition: all 0.15s; }
+      .scope-btn:hover { border-color: #555; }
+      .scope-btn.active { background: #065f46; color: #6ee7b7; border-color: #059669; }
+    `;
+    document.head.appendChild(style);
+
+    // Listen for popup message
+    window.addEventListener('message', (e) => {
+      if (e.data?.google === 'success') {
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm z-50';
+        toast.textContent = '✓ Google account connected';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+        refresh();
+      } else if (e.data?.google === 'error') {
+        const toast = document.createElement('div');
+        toast.className = 'fixed top-4 right-4 bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-2 rounded-lg text-sm z-50';
+        toast.textContent = '✗ Google auth failed: ' + (e.data.message || 'unknown');
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 6000);
+      }
+    });
+
     // Populate redirect URIs
     const redirectUri = `${window.location.origin}/auth/google/callback`;
     document.getElementById('redirectUri').textContent = redirectUri;
@@ -183,15 +249,7 @@
       document.getElementById('btnWorkspace').className = `px-2 py-1 rounded text-xs ${type === 'workspace' ? 'bg-gray-700 text-gray-200' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`;
     }
 
-    function getSelectedServices() {
-      const services = [];
-      if (document.getElementById('svc-gmail').checked) services.push('gmail');
-      if (document.getElementById('svc-calendar').checked) services.push('calendar');
-      if (document.getElementById('svc-drive').checked) services.push('drive');
-      if (document.getElementById('svc-contacts').checked) services.push('contacts');
-      if (document.getElementById('svc-sheets').checked) services.push('sheets');
-      return services;
-    }
+    // (scope picker uses getSelectedScopes above)
 
     async function refresh() {
       try {
@@ -337,14 +395,14 @@
       const clientId = document.getElementById('clientId').value.trim();
       const clientSecret = document.getElementById('clientSecret').value.trim();
       const email = document.getElementById('googleEmail').value.trim();
-      const services = getSelectedServices();
+      const scopes = getSelectedScopes();
 
       if (!clientId || !clientSecret || !email) {
         errorEl.textContent = 'All fields required';
         errorEl.classList.remove('hidden');
         return;
       }
-      if (services.length === 0) {
+      if (scopes.length === 0) {
         errorEl.textContent = 'Select at least one service';
         errorEl.classList.remove('hidden');
         return;
@@ -357,14 +415,14 @@
         const res = await fetch('/api/google/credentials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clientId, clientSecret, email, services }),
+          body: JSON.stringify({ clientId, clientSecret, email, services: scopes }),
         });
         const data = await res.json();
         if (data.ok) {
-          // Stop auto-refresh before redirecting to avoid race condition
-          clearInterval(refreshInterval);
           closeGoogleModal();
-          window.location.href = `/auth/google/start?email=${encodeURIComponent(email)}&services=${services.join(',')}`;
+          // Open OAuth in popup
+          const authUrl = `/auth/google/start?email=${encodeURIComponent(email)}&services=${scopes.join(',')}`;
+          window.open(authUrl, 'google-auth', 'width=500,height=700,left=200,top=100');
           return;
         } else {
           errorEl.textContent = data.error || 'Failed to save credentials';
@@ -377,25 +435,6 @@
         btn.disabled = false;
         btn.textContent = 'Connect Google';
       }
-    }
-
-    // Check for OAuth callback status
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('google') === 'success') {
-      // Show success toast briefly
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-green-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm z-50';
-      toast.textContent = '✓ Google account connected';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 4000);
-      history.replaceState(null, '', '/setup');
-    } else if (params.get('google') === 'error') {
-      const toast = document.createElement('div');
-      toast.className = 'fixed top-4 right-4 bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-2 rounded-lg text-sm z-50';
-      toast.textContent = '✗ Google auth failed: ' + (params.get('message') || 'unknown error');
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 6000);
-      history.replaceState(null, '', '/setup');
     }
 
     refresh();
