@@ -14,6 +14,9 @@ Deploy OpenClaw to Railway in one click. Get a 24/7 AI agent connected to Telegr
 - **Setup UI** — web-based onboarding, env var management, channel pairing, and gateway control
 - **Webhook proxy** — single exposed port handles both the setup UI and gateway webhooks
 
+## Convenient Setup UI
+<img width="2526" height="1364" alt="image" src="https://github.com/user-attachments/assets/568db3f9-d650-4bfb-8f1e-89b2954a40da" />
+
 ## Deploy
 
 Only one variable is needed at deploy time:
