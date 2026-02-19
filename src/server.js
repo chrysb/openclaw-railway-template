@@ -276,6 +276,7 @@ app.get('/api/google/status', async (req, res) => {
 
   let services = '';
   let activeScopes = [];
+  let apiStatus = {};
   try {
     const stateData = JSON.parse(fs.readFileSync(GOG_STATE_PATH, 'utf8'));
     activeScopes = stateData.services || [];
@@ -336,6 +337,64 @@ app.post('/api/google/credentials', async (req, res) => {
     res.json({ ok: false, error: err.message });
   }
 });
+
+// API: Check which Google APIs are enabled (on-demand, not polled)
+const API_TEST_COMMANDS = {
+  gmail: 'gmail labels list --max 1',
+  calendar: 'calendar calendars --max 1',
+  drive: 'drive ls --max 1',
+  contacts: 'contacts list --max 1',
+  sheets: 'sheets list --max 1',
+};
+
+app.get('/api/google/check', async (req, res) => {
+  let email = '';
+  let activeScopes = [];
+  try {
+    const stateData = JSON.parse(fs.readFileSync(GOG_STATE_PATH, 'utf8'));
+    email = stateData.email || '';
+    activeScopes = stateData.services || [];
+  } catch {}
+
+  if (!email) return res.json({ error: 'No Google account configured' });
+
+  const enabledServices = activeScopes.map(s => s.split(':')[0]).filter((v, i, a) => a.indexOf(v) === i);
+  const results = {};
+
+  for (const svc of enabledServices) {
+    const cmd = API_TEST_COMMANDS[svc];
+    if (!cmd) { results[svc] = 'unknown'; continue; }
+
+    const result = await gogCmd(`${cmd} --account ${email}`, { quiet: true });
+    if (result.stderr?.includes('has not been used') || result.stderr?.includes('is not enabled')) {
+      // Extract project number for direct enable link
+      const projectMatch = result.stderr.match(/project=(\d+)/);
+      results[svc] = {
+        status: 'not_enabled',
+        enableUrl: getApiEnableUrl(svc, projectMatch?.[1]),
+      };
+    } else if (result.ok) {
+      results[svc] = { status: 'ok' };
+    } else {
+      results[svc] = { status: 'error', message: result.stderr?.slice(0, 200) };
+    }
+  }
+
+  res.json({ email, results });
+});
+
+function getApiEnableUrl(svc, projectId) {
+  const apiMap = {
+    gmail: 'gmail.googleapis.com',
+    calendar: 'calendar-json.googleapis.com',
+    drive: 'drive.googleapis.com',
+    contacts: 'people.googleapis.com',
+    sheets: 'sheets.googleapis.com',
+  };
+  const api = apiMap[svc] || '';
+  const project = projectId ? `?project=${projectId}` : '';
+  return `https://console.developers.google.com/apis/api/${api}/overview${project}`;
+}
 
 // API: Disconnect Google account
 app.post('/api/google/disconnect', async (req, res) => {

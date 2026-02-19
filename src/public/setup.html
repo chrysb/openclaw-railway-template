@@ -253,6 +253,32 @@
       renderScopePicker('inlineScopePicker', lastGoogleScopes);
     }
 
+    async function checkGoogleApis() {
+      const el = document.getElementById('apiCheckResults');
+      el.innerHTML = '<div class="text-xs text-gray-500 py-1">Checking APIs...</div>';
+
+      const res = await fetch('/api/google/check');
+      const data = await res.json();
+
+      if (data.error) {
+        el.innerHTML = `<div class="text-xs text-red-400 py-1">${data.error}</div>`;
+        return;
+      }
+
+      const rows = Object.entries(data.results).map(([svc, info]) => {
+        const icon = { gmail: '📧', calendar: '📅', drive: '📁', contacts: '👤', sheets: '📊' }[svc] || '•';
+        if (info.status === 'ok') {
+          return `<div class="flex items-center gap-2 text-xs py-0.5"><span>${icon} ${svc}</span><span class="text-green-500">✓ Enabled</span></div>`;
+        } else if (info.status === 'not_enabled') {
+          return `<div class="flex items-center gap-2 text-xs py-0.5"><span>${icon} ${svc}</span><a href="${info.enableUrl}" target="_blank" class="text-red-400 hover:text-red-300 underline">✗ Not enabled → Enable</a></div>`;
+        } else {
+          return `<div class="flex items-center gap-2 text-xs py-0.5"><span>${icon} ${svc}</span><span class="text-yellow-500">? ${info.message || 'Unknown'}</span></div>`;
+        }
+      });
+
+      el.innerHTML = `<div class="bg-black/30 rounded-lg p-2 space-y-0.5">${rows.join('')}</div>`;
+    }
+
     async function disconnectGoogle() {
       if (!confirm('Disconnect Google account? Your agent will lose access to Gmail, Calendar, etc.')) return;
       const res = await fetch('/api/google/disconnect', { method: 'POST' });
@@ -351,7 +377,9 @@
                 </div>
                 <span class="text-xs px-2 py-0.5 rounded-full font-medium bg-green-500/10 text-green-500">Connected</span>
               </div>
+              <div id="apiCheckResults"></div>
               <div class="flex gap-2">
+                <button onclick="checkGoogleApis()" class="text-xs text-blue-400 hover:text-blue-300 underline">Check APIs</button>
                 <button onclick="reconfigureGoogle('${google.email || ''}')" class="text-xs text-gray-400 hover:text-gray-200 underline">Change permissions</button>
                 <button onclick="disconnectGoogle()" class="text-xs text-red-400/60 hover:text-red-400 underline">Disconnect</button>
               </div>
