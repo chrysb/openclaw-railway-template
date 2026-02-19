@@ -266,7 +266,6 @@
 
     function startGoogleAuth(email) {
       const scopes = getSelectedScopes();
-      console.log('Selected scopes:', scopes);
       if (scopes.length === 0) { alert('Select at least one service'); return; }
       const authUrl = `/auth/google/start?email=${encodeURIComponent(email)}&services=${scopes.join(',')}`;
       // Must open popup synchronously in click handler to avoid blockers

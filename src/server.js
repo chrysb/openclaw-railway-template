@@ -423,8 +423,6 @@ app.get('/auth/google/callback', async (req, res) => {
     const { clientId, clientSecret } = readGoogleCredentials();
     const redirectUri = `${getBaseUrl(req)}/auth/google/callback`;
 
-    console.log(`[wrapper] Token exchange: clientId=${clientId?.slice(0, 20)}... redirectUri=${redirectUri} hasSecret=${!!clientSecret}`);
-
     // Exchange code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -439,7 +437,9 @@ app.get('/auth/google/callback', async (req, res) => {
     });
 
     const tokens = await tokenRes.json();
-    console.log(`[wrapper] Google token exchange: status=${tokenRes.status} has_refresh=${!!tokens.refresh_token} error=${tokens.error || 'none'} desc=${tokens.error_description || 'none'}`);
+    if (!tokenRes.ok || tokens.error) {
+      console.log(`[wrapper] Google token exchange failed: status=${tokenRes.status} error=${tokens.error} desc=${tokens.error_description}`);
+    }
 
     if (tokens.error) {
       throw new Error(`Google token error: ${tokens.error_description || tokens.error}`);
@@ -482,10 +482,12 @@ app.get('/auth/google/callback', async (req, res) => {
         refresh_token: tokens.refresh_token,
       };
       fs.writeFileSync(tokenFile, JSON.stringify(tokenData, null, 2));
-      console.log(`[wrapper] Token file written: ${tokenFile} email=${email}`);
-
       const result = await gogCmd(`auth tokens import ${tokenFile}`);
-      console.log(`[wrapper] gog token import: ok=${result.ok} stdout=${result.stdout} stderr=${result.stderr}`);
+      if (result.ok) {
+        console.log(`[wrapper] Google token imported for ${email}`);
+      } else {
+        console.error(`[wrapper] Token import failed: ${result.stderr}`);
+      }
 
       if (!result.ok) {
         console.error(`[wrapper] Token import failed, trying gog auth add --manual`);
