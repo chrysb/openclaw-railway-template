@@ -441,7 +441,19 @@ app.get('/auth/google/callback', async (req, res) => {
     console.log(`[wrapper] Google token exchange: ${tokenRes.status} has_refresh=${!!tokens.refresh_token}`);
 
     if (!tokens.refresh_token) {
-      throw new Error('No refresh token received. Try revoking app access at myaccount.google.com/permissions and retry.');
+      // No refresh token = already authorized before. Check if we have one stored.
+      let hasExisting = false;
+      try {
+        const stateData = JSON.parse(fs.readFileSync(GOG_STATE_PATH, 'utf8'));
+        hasExisting = stateData.authenticated;
+      } catch {}
+
+      if (hasExisting) {
+        // Already have a token, scopes updated via consent screen
+        console.log('[wrapper] No new refresh token (already authorized), keeping existing');
+      } else {
+        throw new Error('No refresh token received. Revoke app access at myaccount.google.com/permissions and retry.');
+      }
     }
 
     // Get user email if not provided
@@ -455,33 +467,18 @@ app.get('/auth/google/callback', async (req, res) => {
       } catch {}
     }
 
-    // Write token file for gog import
-    const tokenFile = `/tmp/gog-token-${Date.now()}.json`;
-    fs.writeFileSync(tokenFile, JSON.stringify({
-      email,
-      refresh_token: tokens.refresh_token,
-      client: 'default',
-    }));
-
-    // Import via gog CLI
-    const result = await gogCmd(`auth tokens import ${tokenFile}`);
-    console.log(`[wrapper] gog token import: ${JSON.stringify(result)}`);
-
-    // Clean up
-    try { fs.unlinkSync(tokenFile); } catch {}
-
-    // Also try gog auth add with the manual flow approach, passing the token directly
-    if (!result.ok) {
-      // Fallback: write token to gog's keyring directly
-      console.log('[wrapper] CLI import failed, trying manual token storage...');
-      // Store as env var for gog to pick up
-      const gogDir = '/root/.config/gogcli';
-      fs.mkdirSync(gogDir, { recursive: true });
-      fs.writeFileSync(`${gogDir}/token-${email}.json`, JSON.stringify({
+    // Import refresh token if we got a new one
+    if (tokens.refresh_token) {
+      const tokenFile = `/tmp/gog-token-${Date.now()}.json`;
+      fs.writeFileSync(tokenFile, JSON.stringify({
+        email,
         refresh_token: tokens.refresh_token,
-        token_type: 'Bearer',
-        expiry: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        client: 'default',
       }));
+
+      const result = await gogCmd(`auth tokens import ${tokenFile}`);
+      console.log(`[wrapper] gog token import: ok=${result.ok}`);
+      try { fs.unlinkSync(tokenFile); } catch {}
     }
 
     // Decode services from state
