@@ -220,21 +220,26 @@
       { key: 'sheets', icon: '📊', label: 'Sheets', defaultRead: false, defaultWrite: false },
     ];
 
-    function renderScopePicker(containerId) {
+    function renderScopePicker(containerId, activeScopes) {
       const el = document.getElementById(containerId);
-      el.innerHTML = SERVICES.map(s => `
+      const hasActive = activeScopes && activeScopes.length > 0;
+      el.innerHTML = SERVICES.map(s => {
+        const readOn = hasActive ? activeScopes.includes(`${s.key}:read`) : s.defaultRead;
+        const writeOn = hasActive ? activeScopes.includes(`${s.key}:write`) : s.defaultWrite;
+        return `
         <div class="flex items-center justify-between bg-black/30 rounded-lg px-3 py-2">
           <span class="text-sm">${s.icon} ${s.label}</span>
           <div class="flex gap-1">
-            <button onclick="toggleScope(this,'${s.key}:read')" data-scope="${s.key}:read" class="scope-btn ${s.defaultRead ? 'active' : ''} text-xs px-2 py-0.5 rounded">Read</button>
-            <button onclick="toggleScope(this,'${s.key}:write')" data-scope="${s.key}:write" class="scope-btn ${s.defaultWrite ? 'active' : ''} text-xs px-2 py-0.5 rounded">Write</button>
+            <button onclick="toggleScope(this,'${s.key}:read')" data-scope="${s.key}:read" class="scope-btn ${readOn ? 'active' : ''} text-xs px-2 py-0.5 rounded">Read</button>
+            <button onclick="toggleScope(this,'${s.key}:write')" data-scope="${s.key}:write" class="scope-btn ${writeOn ? 'active' : ''} text-xs px-2 py-0.5 rounded">Write</button>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
     }
 
+    let lastGoogleScopes = [];
+
     function reconfigureGoogle(email) {
-      // Switch to the "has credentials" view with scope picker
       const googleEl = document.getElementById('googleStatus');
       googleEl.innerHTML = `
         <div class="space-y-3 py-1">
@@ -245,7 +250,7 @@
             <button onclick="refresh()" class="text-gray-400 text-sm px-3 py-2 hover:text-gray-200">Cancel</button>
           </div>
         </div>`;
-      renderScopePicker('inlineScopePicker');
+      renderScopePicker('inlineScopePicker', lastGoogleScopes);
     }
 
     async function disconnectGoogle() {
@@ -334,6 +339,7 @@
         // Google status
         const googleRes = await fetch('/api/google/status');
         const google = await googleRes.json();
+        if (google.activeScopes) lastGoogleScopes = google.activeScopes;
         const googleEl = document.getElementById('googleStatus');
 
         if (google.authenticated) {
@@ -360,7 +366,7 @@
                 <button onclick="startGoogleAuth('${google.email || ''}')" class="bg-white text-black text-sm font-medium px-4 py-2 rounded-lg hover:opacity-85">Sign in with Google</button>
               </div>
             </div>`;
-          renderScopePicker('inlineScopePicker');
+          renderScopePicker('inlineScopePicker', google.activeScopes || []);
         } else {
           googleEl.innerHTML = `
             <div class="text-center space-y-2 py-1">

@@ -259,12 +259,14 @@ app.get('/api/google/status', async (req, res) => {
   }
 
   let services = '';
+  let activeScopes = [];
   try {
     const stateData = JSON.parse(fs.readFileSync(GOG_STATE_PATH, 'utf8'));
-    services = (stateData.services || []).join(', ');
+    activeScopes = stateData.services || [];
+    services = activeScopes.map(s => s.split(':')[0]).filter((v, i, a) => a.indexOf(v) === i).join(', ');
   } catch {}
 
-  res.json({ hasCredentials, authenticated, email, services });
+  res.json({ hasCredentials, authenticated, email, services, activeScopes });
 });
 
 // API: Save Google OAuth credentials
