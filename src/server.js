@@ -27,6 +27,7 @@ function startGateway() {
       ...process.env,
       OPENCLAW_HOME: '/data',
       OPENCLAW_CONFIG_PATH: `${OPENCLAW_DIR}/openclaw.json`,
+      XDG_CONFIG_HOME: OPENCLAW_DIR,
     },
     stdio: ['pipe', 'pipe', 'pipe'],
   });
@@ -210,14 +211,20 @@ const GOG_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets',
 ].join(' ');
 
-const GOG_CREDENTIALS_PATH = '/root/.config/gogcli/credentials.json';
-const GOG_STATE_PATH = `${OPENCLAW_DIR}/google-oauth-state.json`;
+// gog uses XDG_CONFIG_HOME/gogcli/ — we point XDG_CONFIG_HOME to OPENCLAW_DIR
+// so gog config lives at /data/.openclaw/gogcli/ (persistent + gitignored)
+const GOG_CONFIG_DIR = `${OPENCLAW_DIR}/gogcli`;
+const GOG_CREDENTIALS_PATH = `${GOG_CONFIG_DIR}/credentials.json`;
+const GOG_STATE_PATH = `${GOG_CONFIG_DIR}/state.json`;
 
-// Helper: run gog CLI command
+// Helper: run gog CLI command (config stored on persistent volume)
 function gogCmd(cmd) {
   return new Promise((resolve) => {
     console.log(`[wrapper] Running: gog ${cmd}`);
-    exec(`gog ${cmd}`, { timeout: 15000 }, (err, stdout, stderr) => {
+    exec(`gog ${cmd}`, {
+      timeout: 15000,
+      env: { ...process.env, XDG_CONFIG_HOME: `${OPENCLAW_DIR}` },
+    }, (err, stdout, stderr) => {
       const result = { ok: !err, stdout: stdout.trim(), stderr: stderr.trim() };
       console.log(`[wrapper] gog result: ok=${result.ok} stdout=${result.stdout.slice(0, 200)}`);
       resolve(result);
@@ -259,8 +266,7 @@ app.post('/api/google/credentials', async (req, res) => {
 
   try {
     // Write credentials.json in Google's format
-    const credDir = path.dirname(GOG_CREDENTIALS_PATH);
-    fs.mkdirSync(credDir, { recursive: true });
+    fs.mkdirSync(GOG_CONFIG_DIR, { recursive: true });
 
     const credentials = {
       web: {

@@ -21,6 +21,9 @@ fi
 # 1b. Install gog (Google Workspace CLI) if not present
 # ============================================================
 
+# Point gog config to persistent volume
+export XDG_CONFIG_HOME="$OPENCLAW_DIR"
+
 if ! command -v gog &> /dev/null; then
   echo "Installing gog CLI..."
   GOG_VERSION="${GOG_VERSION:-v0.11.0}"
@@ -30,6 +33,14 @@ if ! command -v gog &> /dev/null; then
   chmod +x /usr/local/bin/gog
   rm -f /tmp/gog.tar.gz
   echo "✓ gog $(gog --version 2>/dev/null | head -1) installed"
+fi
+
+# Configure gog keyring to use file backend (no system keyring on Railway)
+GOG_CONFIG_FILE="$OPENCLAW_DIR/gogcli/config.json"
+if [ ! -f "$GOG_CONFIG_FILE" ]; then
+  mkdir -p "$OPENCLAW_DIR/gogcli"
+  gog auth keyring file 2>/dev/null || true
+  echo "✓ gog keyring configured (file backend)"
 fi
 
 # ============================================================
