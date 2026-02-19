@@ -3,11 +3,11 @@ import htm from 'https://esm.sh/htm';
 const html = htm.bind(h);
 
 export const SERVICES = [
-  { key: 'gmail', icon: '📧', label: 'Gmail', defaultRead: true, defaultWrite: true },
+  { key: 'gmail', icon: '📧', label: 'Gmail', defaultRead: true, defaultWrite: false },
   { key: 'calendar', icon: '📅', label: 'Calendar', defaultRead: true, defaultWrite: true },
-  { key: 'drive', icon: '📁', label: 'Drive', defaultRead: false, defaultWrite: false },
-  { key: 'contacts', icon: '👤', label: 'Contacts', defaultRead: false, defaultWrite: false },
-  { key: 'sheets', icon: '📊', label: 'Sheets', defaultRead: false, defaultWrite: false },
+  { key: 'drive', icon: '📁', label: 'Drive', defaultRead: true, defaultWrite: false },
+  { key: 'contacts', icon: '👤', label: 'Contacts', defaultRead: true, defaultWrite: false },
+  { key: 'sheets', icon: '📊', label: 'Sheets', defaultRead: true, defaultWrite: false },
 ];
 
 const API_ENABLE_URLS = {
