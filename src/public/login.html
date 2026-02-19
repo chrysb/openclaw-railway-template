@@ -55,7 +55,7 @@
         });
         const data = await res.json();
         if (data.ok) {
-          window.location.href = '/setup';
+          window.location.href = '/';
         } else {
           errorEl.textContent = data.error || 'Login failed';
           errorEl.classList.remove('hidden');
