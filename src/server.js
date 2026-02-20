@@ -1664,7 +1664,7 @@ const API_TEST_COMMANDS = {
   gmail: "gmail labels list",
   calendar: "calendar calendars",
   tasks: "tasks lists",
-  docs: "docs list",
+  docs: "docs info __api_check__",
   meet: "meet spaces list",
   drive: "drive ls",
   contacts: "contacts list",
