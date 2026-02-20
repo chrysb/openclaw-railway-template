@@ -168,7 +168,7 @@ export function Google() {
         : html`
             <div class="text-center space-y-2 py-1">
               <p class="text-xs text-gray-500">
-                Connect Gmail, Calendar, and Drive to your agent.
+                Connect Gmail, Calendar, Contacts, Drive, Sheets, Tasks, Docs, Meet, and Keep.
               </p>
               <button
                 onclick=${() => setModalOpen(true)}

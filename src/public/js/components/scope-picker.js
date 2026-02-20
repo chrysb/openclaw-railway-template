@@ -1,4 +1,5 @@
 import { h } from 'https://esm.sh/preact';
+import { useState } from 'https://esm.sh/preact/hooks';
 import htm from 'https://esm.sh/htm';
 const html = htm.bind(h);
 
@@ -6,16 +7,24 @@ export const SERVICES = [
   { key: 'gmail', icon: '📧', label: 'Gmail', defaultRead: true, defaultWrite: false },
   { key: 'calendar', icon: '📅', label: 'Calendar', defaultRead: true, defaultWrite: true },
   { key: 'drive', icon: '📁', label: 'Drive', defaultRead: true, defaultWrite: false },
-  { key: 'contacts', icon: '👤', label: 'Contacts', defaultRead: true, defaultWrite: false },
   { key: 'sheets', icon: '📊', label: 'Sheets', defaultRead: true, defaultWrite: false },
+  { key: 'docs', icon: '📝', label: 'Docs', defaultRead: false, defaultWrite: false },
+  { key: 'tasks', icon: '✅', label: 'Tasks', defaultRead: true, defaultWrite: false },
+  { key: 'contacts', icon: '👤', label: 'Contacts', defaultRead: true, defaultWrite: false },
+  { key: 'meet', icon: '🎥', label: 'Meet', defaultRead: false, defaultWrite: false },
+  { key: 'keep', icon: '📌', label: 'Keep', defaultRead: false, defaultWrite: false },
 ];
 
 const API_ENABLE_URLS = {
   gmail: 'gmail.googleapis.com',
   calendar: 'calendar-json.googleapis.com',
+  tasks: 'tasks.googleapis.com',
   drive: 'drive.googleapis.com',
   contacts: 'people.googleapis.com',
   sheets: 'sheets.googleapis.com',
+  docs: 'docs.googleapis.com',
+  meet: 'meet.googleapis.com',
+  keep: 'keep.googleapis.com',
 };
 
 function getApiEnableUrl(svc) {
@@ -23,10 +32,14 @@ function getApiEnableUrl(svc) {
 }
 
 export function ScopePicker({ scopes, onToggle, apiStatus, loading }) {
+  const [showAll, setShowAll] = useState(false);
   const status = apiStatus || {};
+  const kVisibleCount = 5;
+  const hasMore = SERVICES.length > kVisibleCount;
+  const visibleServices = showAll ? SERVICES : SERVICES.slice(0, kVisibleCount);
 
   return html`<div class="space-y-2">
-    ${SERVICES.map(s => {
+    ${visibleServices.map(s => {
       const readOn = scopes.includes(`${s.key}:read`);
       const writeOn = scopes.includes(`${s.key}:write`);
       const api = status[s.key];
@@ -53,6 +66,15 @@ export function ScopePicker({ scopes, onToggle, apiStatus, loading }) {
           </div>
         </div>`;
     })}
+    ${hasMore ? html`
+      <button
+        type="button"
+        onclick=${() => setShowAll((prev) => !prev)}
+        class="text-xs text-gray-500 hover:text-gray-300"
+      >
+        ${showAll ? 'Show fewer services' : `Show more services (${SERVICES.length - kVisibleCount})`}
+      </button>
+    ` : null}
   </div>`;
 }
 

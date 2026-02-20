@@ -1079,6 +1079,14 @@ const SCOPE_MAP = {
   'gmail:write': 'https://www.googleapis.com/auth/gmail.modify',
   'calendar:read': 'https://www.googleapis.com/auth/calendar.readonly',
   'calendar:write': 'https://www.googleapis.com/auth/calendar',
+  'tasks:read': 'https://www.googleapis.com/auth/tasks.readonly',
+  'tasks:write': 'https://www.googleapis.com/auth/tasks',
+  'docs:read': 'https://www.googleapis.com/auth/documents.readonly',
+  'docs:write': 'https://www.googleapis.com/auth/documents',
+  'meet:read': 'https://www.googleapis.com/auth/meetings.space.readonly',
+  'meet:write': 'https://www.googleapis.com/auth/meetings.space.created',
+  'keep:read': 'https://www.googleapis.com/auth/keep.readonly',
+  'keep:write': 'https://www.googleapis.com/auth/keep',
   'drive:read': 'https://www.googleapis.com/auth/drive.readonly',
   'drive:write': 'https://www.googleapis.com/auth/drive',
   'contacts:read': 'https://www.googleapis.com/auth/contacts.readonly',
@@ -1195,7 +1203,7 @@ app.post('/api/google/credentials', async (req, res) => {
     console.log(`[wrapper] gog credentials set: ${JSON.stringify(result)}`);
 
     // Save UI state (email, selected services — credentials stay in credentials.json)
-    const services = req.body.services || ['gmail:read', 'gmail:write', 'calendar:read', 'calendar:write'];
+    const services = req.body.services || ['gmail:read', 'gmail:write', 'calendar:read', 'calendar:write', 'tasks:read'];
     fs.writeFileSync(GOG_STATE_PATH, JSON.stringify({ email, services }));
 
     res.json({ ok: true });
@@ -1209,6 +1217,10 @@ app.post('/api/google/credentials', async (req, res) => {
 const API_TEST_COMMANDS = {
   gmail: 'gmail labels list',
   calendar: 'calendar calendars',
+  tasks: 'tasks lists',
+  docs: 'docs list',
+  meet: 'meet spaces list',
+  keep: 'keep list',
   drive: 'drive ls',
   contacts: 'contacts list',
   sheets: 'sheets metadata __api_check__',
@@ -1255,6 +1267,10 @@ function getApiEnableUrl(svc, projectId) {
   const apiMap = {
     gmail: 'gmail.googleapis.com',
     calendar: 'calendar-json.googleapis.com',
+    tasks: 'tasks.googleapis.com',
+    docs: 'docs.googleapis.com',
+    meet: 'meet.googleapis.com',
+    keep: 'keep.googleapis.com',
     drive: 'drive.googleapis.com',
     contacts: 'people.googleapis.com',
     sheets: 'sheets.googleapis.com',
@@ -1321,7 +1337,7 @@ app.post('/api/google/disconnect', async (req, res) => {
 // OAuth: Start Google auth flow
 app.get('/auth/google/start', (req, res) => {
   const email = req.query.email || '';
-  const services = (req.query.services || 'gmail:read,gmail:write,calendar:read,calendar:write').split(',').filter(Boolean);
+  const services = (req.query.services || 'gmail:read,gmail:write,calendar:read,calendar:write,tasks:read').split(',').filter(Boolean);
 
   try {
     const { clientId } = readGoogleCredentials();
