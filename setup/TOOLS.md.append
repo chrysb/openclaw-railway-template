@@ -14,4 +14,3 @@ After pushing, include a link to the commit using the abbreviated hash: `[abc123
 ## Telegram Formatting
 
 - **Links:** Use markdown syntax `[text](URL)` — HTML `<a href>` does NOT render
-- **Bold/italic:** Standard markdown (`*bold*`, `_italic_`)
