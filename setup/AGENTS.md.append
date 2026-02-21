@@ -21,4 +21,4 @@ Resources changed:
 • path/or/resource (new|edit|delete) — brief description
 ```
 
-Include all internal resources (files, config, cron jobs, skills) and external resources (third-party pages, databases, integrations) that were created, modified, or removed. Skip routine reads.
+Include all internal resources (files, config, cron jobs, skills) and external resources (third-party pages, databases, integrations) that were created, modified, or removed. Skip GitHub activities.
