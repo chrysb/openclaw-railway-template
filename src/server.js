@@ -148,7 +148,7 @@ const fetchLatestOpenclawVersion = async ({ refresh = false } = {}) => {
 const installLatestOpenclaw = () =>
   new Promise((resolve, reject) => {
     exec(
-      "npm install --no-save --package-lock=false openclaw@latest",
+      "npm install --no-save --package-lock=false --ignore-scripts openclaw@latest",
       {
         cwd: kAppDir,
         env: {
@@ -1139,6 +1139,9 @@ app.post("/api/onboard", async (req, res) => {
     fs.writeFileSync(`${OPENCLAW_DIR}/openclaw.json`, content);
     console.log("[onboard] Config sanitized");
 
+    // 4b. Add dashboard allowed origin
+    ensureDashboardOrigin(getBaseUrl(req));
+
     // 5. Append to AGENTS.md, TOOLS.md, and HEARTBEAT.md
     const agentsMd = `${WORKSPACE_DIR}/AGENTS.md`;
     const toolsMd = `${WORKSPACE_DIR}/TOOLS.md`;
@@ -1423,6 +1426,24 @@ function clawCmd(cmd, { quiet = false } = {}) {
 app.get("/api/gateway-status", async (req, res) => {
   const result = await clawCmd("status");
   res.json(result);
+});
+
+// API: gateway dashboard tokenized URL
+app.get("/api/gateway/dashboard", async (req, res) => {
+  if (!isOnboarded()) {
+    return res.json({ ok: false, url: "/openclaw" });
+  }
+  if (ensureDashboardOrigin(getBaseUrl(req))) {
+    runGatewayCmd("restart");
+  }
+  const result = await clawCmd("dashboard --no-open");
+  if (result.ok && result.stdout) {
+    const tokenMatch = result.stdout.match(/#token=([a-zA-Z0-9]+)/);
+    if (tokenMatch) {
+      return res.json({ ok: true, url: `/openclaw/#token=${tokenMatch[1]}` });
+    }
+  }
+  res.json({ ok: true, url: "/openclaw" });
 });
 
 // API: restart gateway
@@ -2217,6 +2238,28 @@ function getBaseUrl(req) {
   const host = req.headers["x-forwarded-host"] || req.headers.host;
   return `${proto}://${host}`;
 }
+
+const ensureDashboardOrigin = (origin) => {
+  if (!origin || !isOnboarded()) return false;
+  try {
+    const configPath = `${OPENCLAW_DIR}/openclaw.json`;
+    const cfg = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    if (!cfg.gateway) cfg.gateway = {};
+    if (!cfg.gateway.controlUi) cfg.gateway.controlUi = {};
+    if (!Array.isArray(cfg.gateway.controlUi.allowedOrigins)) {
+      cfg.gateway.controlUi.allowedOrigins = [];
+    }
+    const origins = cfg.gateway.controlUi.allowedOrigins;
+    if (origins.includes(origin)) return false;
+    origins.push(origin);
+    fs.writeFileSync(configPath, JSON.stringify(cfg, null, 2));
+    console.log(`[wrapper] Added dashboard origin: ${origin}`);
+    return true;
+  } catch (e) {
+    console.error(`[wrapper] ensureDashboardOrigin error: ${e.message}`);
+    return false;
+  }
+};
 
 const kChannelDefs = {
   telegram: { envKey: "TELEGRAM_BOT_TOKEN" },

@@ -64,6 +64,11 @@ export async function restartGateway() {
   return res.json();
 }
 
+export async function fetchDashboardUrl() {
+  const res = await authFetch('/api/gateway/dashboard');
+  return res.json();
+}
+
 export async function fetchOpenclawVersion(refresh = false) {
   const query = refresh ? '?refresh=1' : '';
   const res = await authFetch(`/api/openclaw/version${query}`);
