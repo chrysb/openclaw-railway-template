@@ -27,6 +27,7 @@ const GeneralTab = ({ onSwitchTab }) => {
   const gatewayStatus = status?.gateway ?? null;
   const channels = status?.channels ?? null;
   const repo = status?.repo || null;
+  const openclawVersion = status?.openclawVersion || null;
 
   const hasUnpaired = ALL_CHANNELS.some((ch) => {
     const info = channels?.[ch];
@@ -75,7 +76,7 @@ const GeneralTab = ({ onSwitchTab }) => {
 
   return html`
     <div class="space-y-4">
-      <${Gateway} status=${gatewayStatus} />
+      <${Gateway} status=${gatewayStatus} openclawVersion=${openclawVersion} />
       <${Channels} channels=${channels} onSwitchTab=${onSwitchTab} />
       <${Pairings}
         pending=${pending}

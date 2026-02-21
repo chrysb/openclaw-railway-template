@@ -69,6 +69,106 @@ const kFallbackOnboardingModels = [
   },
 ];
 
+const kVersionCacheTtlMs = 60 * 1000;
+let kOpenclawVersionCache = { value: null, fetchedAt: 0 };
+const kLatestVersionCacheTtlMs = 10 * 60 * 1000;
+const kOpenclawRegistryUrl = "https://registry.npmjs.org/openclaw";
+const kAppDir = "/app";
+let kLatestOpenclawVersionCache = { value: null, fetchedAt: 0 };
+let kOpenclawUpdateInProgress = false;
+
+const normalizeOpenclawVersion = (rawVersion) => {
+  if (!rawVersion) return null;
+  return String(rawVersion).trim().replace(/^openclaw\s*/i, "") || null;
+};
+
+const compareVersionParts = (a, b) => {
+  const aParts = String(a || "")
+    .split(".")
+    .map((part) => Number.parseInt(part, 10) || 0);
+  const bParts = String(b || "")
+    .split(".")
+    .map((part) => Number.parseInt(part, 10) || 0);
+  const maxParts = Math.max(aParts.length, bParts.length);
+  for (let i = 0; i < maxParts; i += 1) {
+    const aPart = aParts[i] ?? 0;
+    const bPart = bParts[i] ?? 0;
+    if (aPart > bPart) return 1;
+    if (aPart < bPart) return -1;
+  }
+  return 0;
+};
+
+const readOpenclawVersion = () => {
+  const now = Date.now();
+  if (
+    kOpenclawVersionCache.value &&
+    now - kOpenclawVersionCache.fetchedAt < kVersionCacheTtlMs
+  ) {
+    return kOpenclawVersionCache.value;
+  }
+  try {
+    const raw = execSync("openclaw --version", {
+      env: gatewayEnv(),
+      timeout: 5000,
+      encoding: "utf8",
+    }).trim();
+    const version = normalizeOpenclawVersion(raw);
+    kOpenclawVersionCache = { value: version, fetchedAt: now };
+    return version;
+  } catch {
+    return kOpenclawVersionCache.value;
+  }
+};
+
+const fetchLatestOpenclawVersion = async ({ refresh = false } = {}) => {
+  const now = Date.now();
+  if (
+    !refresh &&
+    kLatestOpenclawVersionCache.value &&
+    now - kLatestOpenclawVersionCache.fetchedAt < kLatestVersionCacheTtlMs
+  ) {
+    return kLatestOpenclawVersionCache.value;
+  }
+  const res = await fetch(kOpenclawRegistryUrl, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) {
+    throw new Error(`Registry returned ${res.status}`);
+  }
+  const json = await res.json();
+  const latest = normalizeOpenclawVersion(json?.["dist-tags"]?.latest);
+  if (!latest) {
+    throw new Error("Latest version not found in npm metadata");
+  }
+  kLatestOpenclawVersionCache = { value: latest, fetchedAt: now };
+  return latest;
+};
+
+const installLatestOpenclaw = () =>
+  new Promise((resolve, reject) => {
+    exec(
+      "npm install --no-save --package-lock=false openclaw@latest",
+      {
+        cwd: kAppDir,
+        env: {
+          ...process.env,
+          npm_config_update_notifier: "false",
+          npm_config_fund: "false",
+          npm_config_audit: "false",
+        },
+        timeout: 180000,
+      },
+      (err, stdout, stderr) => {
+        if (err) {
+          const message = String(stderr || err.message || "").trim();
+          return reject(new Error(message || "Failed to install openclaw@latest"));
+        }
+        resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+      },
+    );
+  });
+
 // ============================================================
 // Env var management
 // ============================================================
@@ -1207,12 +1307,91 @@ app.get("/api/status", async (req, res) => {
   const configExists = fs.existsSync(`${OPENCLAW_DIR}/openclaw.json`);
   const running = await isGatewayRunning();
   const repo = process.env.GITHUB_WORKSPACE_REPO || "";
+  const openclawVersion = readOpenclawVersion();
   res.json({
     gateway: running ? "running" : configExists ? "starting" : "not_onboarded",
     configExists,
     channels: getChannelStatus(),
     repo,
+    openclawVersion,
   });
+});
+
+app.get("/api/openclaw/version", async (req, res) => {
+  const refresh = String(req.query.refresh || "") === "1";
+  const currentVersion = readOpenclawVersion();
+  try {
+    const latestVersion = await fetchLatestOpenclawVersion({ refresh });
+    const hasUpdate = !!(
+      currentVersion &&
+      latestVersion &&
+      compareVersionParts(latestVersion, currentVersion) > 0
+    );
+    return res.json({
+      ok: true,
+      currentVersion,
+      latestVersion,
+      hasUpdate,
+    });
+  } catch (err) {
+    return res.json({
+      ok: false,
+      currentVersion,
+      latestVersion: kLatestOpenclawVersionCache.value,
+      hasUpdate: false,
+      error: err.message || "Failed to fetch latest OpenClaw version",
+    });
+  }
+});
+
+app.post("/api/openclaw/update", async (req, res) => {
+  if (kOpenclawUpdateInProgress) {
+    return res.status(409).json({
+      ok: false,
+      error: "OpenClaw update already in progress",
+    });
+  }
+
+  kOpenclawUpdateInProgress = true;
+  const previousVersion = readOpenclawVersion();
+  try {
+    const latestBeforeUpdate =
+      (await fetchLatestOpenclawVersion({ refresh: true }).catch(() => null)) ||
+      kLatestOpenclawVersionCache.value;
+    await installLatestOpenclaw();
+    kOpenclawVersionCache = { value: null, fetchedAt: 0 };
+    const currentVersion = readOpenclawVersion();
+    const latestVersion =
+      (await fetchLatestOpenclawVersion({ refresh: true }).catch(() => null)) ||
+      latestBeforeUpdate ||
+      kLatestOpenclawVersionCache.value;
+    const hasUpdate = !!(
+      currentVersion &&
+      latestVersion &&
+      compareVersionParts(latestVersion, currentVersion) > 0
+    );
+    let restarted = false;
+    if (isOnboarded()) {
+      restartGateway();
+      restarted = true;
+    }
+    return res.json({
+      ok: true,
+      previousVersion,
+      currentVersion,
+      latestVersion,
+      hasUpdate,
+      restarted,
+      updated: previousVersion !== currentVersion,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: err.message || "Failed to update OpenClaw",
+    });
+  } finally {
+    kOpenclawUpdateInProgress = false;
+  }
 });
 
 // Helper: run openclaw CLI command
@@ -2178,6 +2357,7 @@ const SETUP_API_PREFIXES = [
   "/api/onboard",
   "/api/env",
   "/api/auth",
+  "/api/openclaw",
 ];
 app.all("/api/*", (req, res) => {
   if (SETUP_API_PREFIXES.some((p) => req.path.startsWith(p))) return;
