@@ -3,6 +3,20 @@ import { useState } from 'https://esm.sh/preact/hooks';
 import htm from 'https://esm.sh/htm';
 const html = htm.bind(h);
 
+const kModeLabels = {
+  webchat: 'Browser',
+  cli: 'CLI',
+};
+
+const formatTitle = (d) => kModeLabels[d.clientMode] || d.clientId || 'Device';
+
+const formatSubtitle = (d) => {
+  const parts = [];
+  if (d.platform) parts.push(d.platform);
+  if (d.role) parts.push(d.role);
+  return parts.join(' · ');
+};
+
 const DeviceRow = ({ d, onApprove, onReject }) => {
   const [busy, setBusy] = useState(null);
 
@@ -16,30 +30,30 @@ const DeviceRow = ({ d, onApprove, onReject }) => {
     }
   };
 
-  const shortLabel = (d.label || 'Browser').replace(/^Mozilla\/[\d.]+ /, '').slice(0, 60);
+  const title = formatTitle(d);
+  const subtitle = formatSubtitle(d);
 
   if (busy === 'approve') {
     return html`
       <div class="bg-black/30 rounded-lg p-3 mb-2 flex items-center gap-2">
         <span class="text-green-400 text-sm">Approved</span>
-        <span class="text-gray-500 text-xs truncate">${shortLabel}</span>
+        <span class="text-gray-500 text-xs">${title}</span>
       </div>`;
   }
   if (busy === 'reject') {
     return html`
       <div class="bg-black/30 rounded-lg p-3 mb-2 flex items-center gap-2">
         <span class="text-gray-400 text-sm">Rejected</span>
-        <span class="text-gray-500 text-xs truncate">${shortLabel}</span>
+        <span class="text-gray-500 text-xs">${title}</span>
       </div>`;
   }
 
   return html`
     <div class="bg-black/30 rounded-lg p-3 mb-2">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="text-sm font-medium">Device</span>
-        ${d.ip && html`<span class="text-xs text-gray-500">${d.ip}</span>`}
+      <div class="flex items-center gap-2 mb-2">
+        <span class="font-medium text-sm">${title}</span>
+        ${subtitle && html`<span class="text-xs text-gray-500">${subtitle}</span>`}
       </div>
-      <div class="text-xs text-gray-400 truncate mb-2">${shortLabel}</div>
       <div class="flex gap-2">
         <button onclick=${() => handle('approve')} class="bg-green-500 text-black text-xs font-medium px-3 py-1.5 rounded-lg hover:opacity-85">Approve</button>
         <button onclick=${() => handle('reject')} class="bg-gray-800 text-gray-300 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-700">Reject</button>

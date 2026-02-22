@@ -1527,9 +1527,12 @@ app.get("/api/devices", async (req, res) => {
     const parsed = JSON.parse(result.stdout);
     const pending = (parsed.pending || []).map((d) => ({
       id: d.requestId || d.id,
-      label: d.userAgent || d.ua || d.label || "Browser",
-      ip: d.ip || d.remoteAddress || null,
-      ts: d.timestamp || d.ts || null,
+      platform: d.platform || null,
+      clientId: d.clientId || null,
+      clientMode: d.clientMode || null,
+      role: d.role || null,
+      scopes: d.scopes || [],
+      ts: d.ts || null,
     }));
     devicePairingCache = { pending, ts: Date.now() };
     res.json({ pending });
