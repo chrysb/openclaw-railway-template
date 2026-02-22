@@ -148,7 +148,7 @@ const fetchLatestOpenclawVersion = async ({ refresh = false } = {}) => {
 const installLatestOpenclaw = () =>
   new Promise((resolve, reject) => {
     exec(
-      "npm install --no-save --package-lock=false --ignore-scripts openclaw@latest",
+      "npm install --no-save --package-lock=false openclaw@latest",
       {
         cwd: kAppDir,
         env: {
