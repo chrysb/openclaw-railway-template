@@ -1,9 +1,20 @@
 const fs = require("fs");
 const { OPENCLAW_DIR } = require("../constants");
 
-const registerPairingRoutes = ({ app, clawCmd, isOnboarded }) => {
+const registerPairingRoutes = ({ app, clawCmd, isOnboarded, fsModule = fs, openclawDir = OPENCLAW_DIR }) => {
   let pairingCache = { pending: [], ts: 0 };
   const PAIRING_CACHE_TTL = 10000;
+  const kCliAutoApproveMarkerPath = `${openclawDir}/.cli-device-auto-approved`;
+
+  const hasCliAutoApproveMarker = () => fsModule.existsSync(kCliAutoApproveMarkerPath);
+
+  const writeCliAutoApproveMarker = () => {
+    fsModule.mkdirSync(openclawDir, { recursive: true });
+    fsModule.writeFileSync(
+      kCliAutoApproveMarkerPath,
+      JSON.stringify({ approvedAt: new Date().toISOString() }, null, 2),
+    );
+  };
 
   app.get("/api/pairings", async (req, res) => {
     if (Date.now() - pairingCache.ts < PAIRING_CACHE_TTL) {
@@ -65,12 +76,32 @@ const registerPairingRoutes = ({ app, clawCmd, isOnboarded }) => {
     if (!result.ok) return res.json({ pending: [] });
     try {
       const parsed = JSON.parse(result.stdout);
-      const pending = (parsed.pending || [])
-        .filter((d) => {
+      const pendingList = Array.isArray(parsed.pending) ? parsed.pending : [];
+      let autoApprovedRequestId = null;
+      if (!hasCliAutoApproveMarker()) {
+        const firstCliPending = pendingList.find((d) => {
           const clientId = String(d.clientId || "").toLowerCase();
           const clientMode = String(d.clientMode || "").toLowerCase();
-          return clientId !== "cli" && clientMode !== "cli";
-        })
+          return clientId === "cli" || clientMode === "cli";
+        });
+        const firstCliPendingId = firstCliPending?.requestId || firstCliPending?.id;
+        if (firstCliPendingId) {
+          console.log(`[wrapper] Auto-approving first CLI device request: ${firstCliPendingId}`);
+          const approveResult = await clawCmd(`devices approve ${firstCliPendingId}`, {
+            quiet: true,
+          });
+          if (approveResult.ok) {
+            writeCliAutoApproveMarker();
+            autoApprovedRequestId = String(firstCliPendingId);
+          } else {
+            console.log(
+              `[wrapper] CLI auto-approve failed: ${(approveResult.stderr || "").slice(0, 200)}`,
+            );
+          }
+        }
+      }
+      const pending = pendingList
+        .filter((d) => String(d.requestId || d.id || "") !== autoApprovedRequestId)
         .map((d) => ({
           id: d.requestId || d.id,
           platform: d.platform || null,
