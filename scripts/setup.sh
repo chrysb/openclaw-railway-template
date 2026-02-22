@@ -62,6 +62,56 @@ if [ ! -L "/root/.openclaw" ] && [ ! -d "/root/.openclaw" ]; then
   ln -s "$OPENCLAW_DIR" /root/.openclaw
 fi
 
+# Install/reconcile system cron entry for deterministic hourly git sync.
+if [ -f "$OPENCLAW_DIR/hourly-git-sync.sh" ]; then
+  SYNC_CRON_CONFIG="$OPENCLAW_DIR/cron/system-sync.json"
+  SYNC_CRON_ENABLED="true"
+  SYNC_CRON_SCHEDULE="0 * * * *"
+
+  if [ -f "$SYNC_CRON_CONFIG" ]; then
+    SYNC_CRON_ENABLED=$(node -e "
+      const fs = require('fs');
+      try {
+        const cfg = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+        process.stdout.write(String(cfg.enabled !== false));
+      } catch {
+        process.stdout.write('true');
+      }
+    " "$SYNC_CRON_CONFIG")
+    SYNC_CRON_SCHEDULE=$(node -e "
+      const fs = require('fs');
+      try {
+        const cfg = JSON.parse(fs.readFileSync(process.argv[1], 'utf8'));
+        const schedule = String(cfg.schedule || '').trim();
+        const valid = /^(\\S+\\s+){4}\\S+$/.test(schedule);
+        process.stdout.write(valid ? schedule : '0 * * * *');
+      } catch {
+        process.stdout.write('0 * * * *');
+      }
+    " "$SYNC_CRON_CONFIG")
+  fi
+
+  if [ "$SYNC_CRON_ENABLED" = "true" ]; then
+    cat > /etc/cron.d/openclaw-hourly-sync <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+$SYNC_CRON_SCHEDULE root bash "$OPENCLAW_DIR/hourly-git-sync.sh" >> /var/log/openclaw-hourly-sync.log 2>&1
+EOF
+    chmod 0644 /etc/cron.d/openclaw-hourly-sync
+    echo "✓ System cron entry installed"
+  else
+    rm -f /etc/cron.d/openclaw-hourly-sync
+    echo "✓ System cron entry disabled"
+  fi
+fi
+
+if command -v cron >/dev/null 2>&1; then
+  if ! pgrep -x cron >/dev/null 2>&1; then
+    cron
+  fi
+  echo "✓ Cron daemon running"
+fi
+
 # ============================================================
 # 4. Google Workspace (gog CLI) — env-var based setup
 # ============================================================

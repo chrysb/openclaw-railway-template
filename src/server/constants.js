@@ -220,6 +220,7 @@ const SETUP_API_PREFIXES = [
   "/api/auth",
   "/api/openclaw",
   "/api/devices",
+  "/api/sync-cron",
 ];
 
 module.exports = {

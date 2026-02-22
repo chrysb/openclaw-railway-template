@@ -80,6 +80,40 @@ export async function updateOpenclaw() {
   return res.json();
 }
 
+export async function fetchSyncCron() {
+  const res = await authFetch('/api/sync-cron');
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(text || 'Could not parse sync cron response');
+  }
+  if (!res.ok) {
+    throw new Error(data.error || text || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
+export async function updateSyncCron(payload) {
+  const res = await authFetch('/api/sync-cron', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(text || 'Could not parse sync cron response');
+  }
+  if (!res.ok) {
+    throw new Error(data.error || text || `HTTP ${res.status}`);
+  }
+  return data;
+}
+
 export async function fetchDevicePairings() {
   const res = await authFetch('/api/devices');
   return res.json();

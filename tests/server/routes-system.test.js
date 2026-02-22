@@ -7,6 +7,12 @@ const createSystemDeps = () => {
   const deps = {
     fs: {
       existsSync: vi.fn(() => true),
+      readFileSync: vi.fn(() => {
+        throw new Error("no config");
+      }),
+      writeFileSync: vi.fn(),
+      mkdirSync: vi.fn(),
+      rmSync: vi.fn(),
     },
     readEnvFile: vi.fn(() => []),
     writeEnvFile: vi.fn(),
@@ -133,7 +139,58 @@ describe("server/routes/system", () => {
         gateway: "running",
         configExists: true,
         openclawVersion: "1.2.3",
+        syncCron: expect.objectContaining({
+          enabled: true,
+          schedule: "0 * * * *",
+        }),
       }),
     );
+  });
+
+  it("returns sync cron status on GET /api/sync-cron", async () => {
+    const deps = createSystemDeps();
+    deps.fs.readFileSync.mockReturnValueOnce(
+      JSON.stringify({ enabled: false, schedule: "*/30 * * * *" }),
+    );
+    const app = createApp(deps);
+
+    const res = await request(app).get("/api/sync-cron");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(
+      expect.objectContaining({
+        ok: true,
+        enabled: false,
+        schedule: "*/30 * * * *",
+      }),
+    );
+  });
+
+  it("updates sync cron config on PUT /api/sync-cron", async () => {
+    const deps = createSystemDeps();
+    deps.fs.readFileSync.mockReturnValueOnce(
+      JSON.stringify({ enabled: true, schedule: "0 * * * *" }),
+    );
+    const app = createApp(deps);
+
+    const res = await request(app).put("/api/sync-cron").send({
+      enabled: true,
+      schedule: "*/15 * * * *",
+    });
+
+    expect(res.status).toBe(200);
+    expect(deps.fs.mkdirSync).toHaveBeenCalledWith("/tmp/openclaw/cron", {
+      recursive: true,
+    });
+    expect(deps.fs.writeFileSync).toHaveBeenCalledWith(
+      "/tmp/openclaw/cron/system-sync.json",
+      expect.stringContaining('"schedule": "*/15 * * * *"'),
+    );
+    expect(deps.fs.writeFileSync).toHaveBeenCalledWith(
+      "/etc/cron.d/openclaw-hourly-sync",
+      expect.stringContaining('*/15 * * * * root bash "/tmp/openclaw/hourly-git-sync.sh"'),
+      expect.objectContaining({ mode: 0o644 }),
+    );
+    expect(res.body.ok).toBe(true);
   });
 });

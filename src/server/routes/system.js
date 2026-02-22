@@ -16,6 +16,54 @@ const registerSystemRoutes = ({
   restartGateway,
   OPENCLAW_DIR,
 }) => {
+  const kSystemCronPath = "/etc/cron.d/openclaw-hourly-sync";
+  const kSystemCronConfigPath = `${OPENCLAW_DIR}/cron/system-sync.json`;
+  const kSystemCronScriptPath = `${OPENCLAW_DIR}/hourly-git-sync.sh`;
+  const kDefaultSystemCronSchedule = "0 * * * *";
+  const isValidCronSchedule = (value) =>
+    typeof value === "string" && /^(\S+\s+){4}\S+$/.test(value.trim());
+  const buildSystemCronContent = (schedule) =>
+    [
+      "SHELL=/bin/bash",
+      "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      `${schedule} root bash "${kSystemCronScriptPath}" >> /var/log/openclaw-hourly-sync.log 2>&1`,
+      "",
+    ].join("\n");
+  const readSystemCronConfig = () => {
+    try {
+      const raw = fs.readFileSync(kSystemCronConfigPath, "utf8");
+      const parsed = JSON.parse(raw);
+      const enabled = parsed.enabled !== false;
+      const schedule = isValidCronSchedule(parsed.schedule)
+        ? parsed.schedule.trim()
+        : kDefaultSystemCronSchedule;
+      return { enabled, schedule };
+    } catch {
+      return { enabled: true, schedule: kDefaultSystemCronSchedule };
+    }
+  };
+  const getSystemCronStatus = () => {
+    const config = readSystemCronConfig();
+    return {
+      enabled: config.enabled,
+      schedule: config.schedule,
+      installed: fs.existsSync(kSystemCronPath),
+      scriptExists: fs.existsSync(kSystemCronScriptPath),
+    };
+  };
+  const applySystemCronConfig = (nextConfig) => {
+    fs.mkdirSync(`${OPENCLAW_DIR}/cron`, { recursive: true });
+    fs.writeFileSync(kSystemCronConfigPath, JSON.stringify(nextConfig, null, 2));
+    if (nextConfig.enabled) {
+      fs.writeFileSync(kSystemCronPath, buildSystemCronContent(nextConfig.schedule), {
+        mode: 0o644,
+      });
+    } else {
+      fs.rmSync(kSystemCronPath, { force: true });
+    }
+    return getSystemCronStatus();
+  };
+
   app.get("/api/env", (req, res) => {
     const fileVars = readEnvFile();
     const merged = [];
@@ -77,7 +125,32 @@ const registerSystemRoutes = ({
       channels: getChannelStatus(),
       repo,
       openclawVersion,
+      syncCron: getSystemCronStatus(),
     });
+  });
+
+  app.get("/api/sync-cron", (req, res) => {
+    res.json({ ok: true, ...getSystemCronStatus() });
+  });
+
+  app.put("/api/sync-cron", (req, res) => {
+    const current = readSystemCronConfig();
+    const { enabled, schedule } = req.body || {};
+    if (enabled !== undefined && typeof enabled !== "boolean") {
+      return res.status(400).json({ ok: false, error: "enabled must be a boolean" });
+    }
+    if (schedule !== undefined && !isValidCronSchedule(schedule)) {
+      return res.status(400).json({ ok: false, error: "schedule must be a 5-field cron string" });
+    }
+    const nextConfig = {
+      enabled: typeof enabled === "boolean" ? enabled : current.enabled,
+      schedule:
+        typeof schedule === "string" && schedule.trim()
+          ? schedule.trim()
+          : current.schedule,
+    };
+    const status = applySystemCronConfig(nextConfig);
+    res.json({ ok: true, syncCron: status });
   });
 
   app.get("/api/openclaw/version", async (req, res) => {

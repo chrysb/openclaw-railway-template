@@ -126,4 +126,67 @@ describe("server/routes/onboarding", () => {
     expect(deps.writeEnvFile).toHaveBeenCalledTimes(1);
     expect(deps.reloadEnv).toHaveBeenCalledTimes(1);
   });
+
+  it("installs deterministic hourly git sync cron during successful onboarding", async () => {
+    const deps = createBaseDeps();
+    deps.fs.readFileSync.mockImplementation((path) => {
+      if (path === "/tmp/openclaw/openclaw.json") return "{}";
+      if (path === "/app/setup/AGENTS.md.append") return "AGENTS_APPEND";
+      if (path === "/app/setup/TOOLS.md.append") return "TOOLS_APPEND";
+      if (path === "/app/setup/skills/control-ui/SKILL.md") return "BASE={{BASE_URL}}";
+      if (path === "/app/setup/hourly-git-sync.sh") return "echo Auto-commit hourly sync";
+      return "{}";
+    });
+    const app = createApp(deps);
+    global.fetch
+      .mockResolvedValueOnce({ status: 404 })
+      .mockResolvedValueOnce({ ok: true, statusText: "ok", json: async () => ({}) });
+
+    const res = await request(app).post("/api/onboard").send(makeValidBody());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    expect(deps.startGateway).toHaveBeenCalledTimes(1);
+
+    expect(deps.fs.writeFileSync).toHaveBeenCalledWith(
+      "/tmp/openclaw/hourly-git-sync.sh",
+      expect.stringContaining("Auto-commit hourly sync"),
+      expect.objectContaining({ mode: 0o755 }),
+    );
+
+    expect(deps.fs.writeFileSync).toHaveBeenCalledWith(
+      "/etc/cron.d/openclaw-hourly-sync",
+      expect.stringContaining('0 * * * * root bash "/tmp/openclaw/hourly-git-sync.sh"'),
+      expect.objectContaining({ mode: 0o644 }),
+    );
+
+    const initialPushCall = deps.shellCmd.mock.calls.find(([cmd]) =>
+      cmd.includes('git commit -m "initial setup"'),
+    );
+    expect(initialPushCall[0]).toContain("git push -u --force origin main");
+  });
+
+  it("allows onboarding into an existing repo and still force-pushes initial setup", async () => {
+    const deps = createBaseDeps();
+    deps.fs.readFileSync.mockImplementation((path) => {
+      if (path === "/tmp/openclaw/openclaw.json") return "{}";
+      if (path === "/app/setup/AGENTS.md.append") return "AGENTS_APPEND";
+      if (path === "/app/setup/TOOLS.md.append") return "TOOLS_APPEND";
+      if (path === "/app/setup/skills/control-ui/SKILL.md") return "BASE={{BASE_URL}}";
+      if (path === "/app/setup/hourly-git-sync.sh") return "echo Auto-commit hourly sync";
+      return "{}";
+    });
+    const app = createApp(deps);
+    global.fetch.mockResolvedValueOnce({ ok: true, status: 200 });
+
+    const res = await request(app).post("/api/onboard").send(makeValidBody());
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+    const initialPushCall = deps.shellCmd.mock.calls.find(([cmd]) =>
+      cmd.includes('git commit -m "initial setup"'),
+    );
+    expect(initialPushCall).toBeTruthy();
+    expect(initialPushCall[0]).toContain("git push -u --force origin main");
+  });
 });

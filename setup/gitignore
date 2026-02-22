@@ -1,19 +1,11 @@
-# Auth & secrets
-agents/
-credentials/
-identity/
-gogcli/
-*.token
+# Ignore everything by default.
+*
 
-# Logs & caches
-logs/
-canvas/
-*.log
-update-check.json
-
-# Backups
-*.bak
-*.bak.*
-
-# OS
-.DS_Store
+# Whitelist specific files/dirs.
+!workspace/
+!workspace/**
+!skills/
+!skills/**
+!cron/
+!cron/jobs.json
+!.gitignore
