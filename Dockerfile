@@ -4,9 +4,8 @@ RUN apt-get update && apt-get install -y git curl procps && rm -rf /var/lib/apt/
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install
-RUN npm install --no-save --package-lock=false openclaw@latest
+COPY package.json ./
+RUN npm install --no-package-lock
 
 ENV PATH="/app/node_modules/.bin:$PATH"
 
