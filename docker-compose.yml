@@ -6,7 +6,7 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     env_file: .env
     volumes:
-      # Persistent data survives container restarts (like Railway volumes)
+      # Persistent data survives container restarts (like Render disks or Railway volumes)
       - openclaw-data:/data
 
 volumes:

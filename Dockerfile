@@ -12,6 +12,6 @@ ENV ALPHACLAW_ROOT_DIR=/data
 
 RUN mkdir -p /data
 
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["alphaclaw", "start"]
