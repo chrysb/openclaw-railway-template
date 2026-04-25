@@ -1,6 +1,6 @@
 FROM node:22-slim
 
-RUN apt-get update && apt-get install -y git curl procps python3 make g++ cron && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git curl procps python3 make g++ cron tini && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -14,4 +14,5 @@ RUN mkdir -p /data
 
 EXPOSE 3000
 
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["alphaclaw", "start"]
