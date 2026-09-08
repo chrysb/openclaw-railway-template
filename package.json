@@ -14,6 +14,6 @@
     "@chrysb/alphaclaw": "0.9.34"
   },
   "engines": {
-    "node": ">=22.22.3 <23"
+    "node": ">=26.1.0"
   }
 }
